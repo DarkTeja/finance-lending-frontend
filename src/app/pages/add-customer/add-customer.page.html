@@ -1,0 +1,117 @@
+<ion-header class="ion-no-border glass-header">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="goBack()" color="light">
+        <ion-icon name="arrow-back-outline" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>Register Customer</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" class="add-cust-bg">
+  <div class="form-banner">
+    <h2>Add New Customer</h2>
+    <p>Fill out the profile. Only Name, Mobile, and Place are required.</p>
+  </div>
+
+  <div class="content-container">
+    <form [formGroup]="customerForm" (ngSubmit)="onSubmit()" class="customer-form">
+      <!-- Section: Personal Info -->
+      <div class="form-section glass-panel">
+        <h3>Mandatory Details</h3>
+        
+        <div class="input-item">
+          <label>Customer Full Name *</label>
+          <input type="text" formControlName="name" placeholder="E.g., Ramesh Kumar" class="form-input" />
+          <span *ngIf="customerForm.get('name')?.touched && customerForm.get('name')?.invalid" class="error-msg">
+            Name is required (min 3 characters)
+          </span>
+        </div>
+
+        <div class="input-row">
+          <div class="input-item">
+            <label>Mobile Number *</label>
+            <input type="text" formControlName="mobile_number" placeholder="10-digit Mobile" class="form-input" />
+            <span *ngIf="customerForm.get('mobile_number')?.touched && customerForm.get('mobile_number')?.invalid" class="error-msg">
+              Must be exactly 10 digits
+            </span>
+          </div>
+
+          <div class="input-item">
+            <label>Place *</label>
+            <input type="text" formControlName="place" placeholder="E.g., Nagar, Guntur" class="form-input" />
+            <span *ngIf="customerForm.get('place')?.touched && customerForm.get('place')?.invalid" class="error-msg">
+              Place is required
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section: Optional Details -->
+      <div class="form-section glass-panel">
+        <h3>Additional Details (Optional)</h3>
+
+        <div class="input-row">
+          <div class="input-item">
+            <label>Father's Name (Optional)</label>
+            <input type="text" formControlName="father_name" placeholder="Father's Full Name" class="form-input" />
+          </div>
+
+          <div class="input-item">
+            <label>Occupation (Optional)</label>
+            <input type="text" formControlName="occupation" placeholder="E.g., Business, Farmer" class="form-input" />
+          </div>
+        </div>
+
+        <div class="input-row">
+          <div class="input-item">
+            <label>Aadhaar Number (Optional)</label>
+            <input type="text" formControlName="aadhaar_number" placeholder="12-digit number" class="form-input" />
+          </div>
+
+          <div class="input-item">
+            <label>PAN Card Number (Optional)</label>
+            <input type="text" formControlName="pan_number" placeholder="ABCDE1234F" class="form-input" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Section: Guarantor (Optional) -->
+      <div class="form-section glass-panel">
+        <h3>Guarantor Details (Optional)</h3>
+
+        <div class="input-row">
+          <div class="input-item">
+            <label>Guarantor Name (Optional)</label>
+            <input type="text" formControlName="guarantor_name" placeholder="Guarantor Name" class="form-input" />
+          </div>
+
+          <div class="input-item">
+            <label>Guarantor Mobile (Optional)</label>
+            <input type="text" formControlName="guarantor_mobile" placeholder="10-digit mobile" class="form-input" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Section: Notes -->
+      <div class="form-section glass-panel">
+        <h3>Residential Address & Notes (Optional)</h3>
+
+        <div class="input-item">
+          <label>Full Residential Address (Optional)</label>
+          <textarea formControlName="address" rows="3" placeholder="Enter home address..." class="form-textarea"></textarea>
+        </div>
+
+        <div class="input-item">
+          <label>Special Instructions / Notes (Optional)</label>
+          <textarea formControlName="notes" rows="2" placeholder="Collateral or reference details..." class="form-textarea"></textarea>
+        </div>
+      </div>
+
+      <button type="submit" [disabled]="customerForm.invalid" class="submit-form-btn">
+        Register Customer
+      </button>
+    </form>
+  </div>
+</ion-content>

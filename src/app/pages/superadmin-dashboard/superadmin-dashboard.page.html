@@ -1,0 +1,153 @@
+<ion-header class="ion-no-border glass-header">
+  <ion-toolbar>
+    <ion-title>Superadmin Control Center</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="logout()" color="danger">
+        <ion-icon name="log-out-outline" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" class="dashboard-bg">
+  <div class="header-banner">
+    <h2>LendFlow Operations</h2>
+    <p>Logged in as: Superadmin | System-wide access</p>
+  </div>
+
+  <div class="content-container">
+    <!-- Section: Organizations -->
+    <div class="section-card glass-panel">
+      <div class="card-header">
+        <h3>Organizations (Tenants)</h3>
+        <button class="action-btn" (click)="isAddOrgOpen = true">
+          <ion-icon name="business-outline" slot="start"></ion-icon> Add Organization
+        </button>
+      </div>
+
+      <div class="orgs-list">
+        <div *ngIf="organizations.length === 0" class="empty-state">
+          <ion-icon name="business-outline"></ion-icon>
+          <p>No organizations created yet.</p>
+        </div>
+
+        <div *ngFor="let org of organizations" class="org-card">
+          <div class="org-icon">
+            <ion-icon name="business"></ion-icon>
+          </div>
+          <div class="org-info">
+            <h4>{{ org.name }}</h4>
+            <p>ID: {{ org.uuid }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section: Admins -->
+    <div class="section-card glass-panel">
+      <div class="card-header">
+        <h3>Tenant Administrators</h3>
+        <button class="action-btn-green" (click)="isAddAdminOpen = true">
+          <ion-icon name="person-add-outline" slot="start"></ion-icon> Create Admin
+        </button>
+      </div>
+
+      <div class="admins-list">
+        <div *ngIf="admins.length === 0" class="empty-state">
+          <ion-icon name="people-outline"></ion-icon>
+          <p>No administrators registered.</p>
+        </div>
+
+        <div *ngFor="let adm of admins" class="admin-card">
+          <div class="avatar-circle">
+            {{ adm.name.charAt(0).toUpperCase() }}
+          </div>
+          <div class="details">
+            <h4>{{ adm.name }}</h4>
+            <p>User: {{ adm.username }} • Mob: {{ adm.mobile_number || 'N/A' }}</p>
+            <span class="org-tag">{{ adm.organization_name || 'Unassigned Organization' }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create Organization Modal -->
+  <ion-modal [isOpen]="isAddOrgOpen" (didDismiss)="isAddOrgOpen = false" class="glass-modal">
+    <ng-template>
+      <ion-header class="ion-no-border">
+        <ion-toolbar>
+          <ion-title>New Organization</ion-title>
+          <ion-buttons slot="end">
+            <ion-button (click)="isAddOrgOpen = false">Close</ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+
+      <ion-content class="modal-bg">
+        <form [formGroup]="orgForm" (ngSubmit)="onCreateOrganization()" class="modal-form">
+          <div class="input-group">
+            <label>Organization Name *</label>
+            <input type="text" formControlName="name" placeholder="E.g., Reddy Microfinance Ltd" />
+          </div>
+
+          <button type="submit" [disabled]="orgForm.invalid" class="submit-modal-btn">
+            Create Organization
+          </button>
+        </form>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+
+  <!-- Create Admin Modal -->
+  <ion-modal [isOpen]="isAddAdminOpen" (didDismiss)="isAddAdminOpen = false" class="glass-modal">
+    <ng-template>
+      <ion-header class="ion-no-border">
+        <ion-toolbar>
+          <ion-title>New Tenant Admin</ion-title>
+          <ion-buttons slot="end">
+            <ion-button (click)="isAddAdminOpen = false">Close</ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+
+      <ion-content class="modal-bg">
+        <form [formGroup]="adminForm" (ngSubmit)="onCreateAdmin()" class="modal-form">
+          <div class="input-group">
+            <label>Full Name *</label>
+            <input type="text" formControlName="name" placeholder="E.g., John Doe" />
+          </div>
+
+          <div class="input-group">
+            <label>Username (Login ID) *</label>
+            <input type="text" formControlName="username" placeholder="E.g., john_admin" />
+          </div>
+
+          <div class="input-group">
+            <label>Password *</label>
+            <input type="password" formControlName="password" placeholder="Min. 6 characters..." />
+          </div>
+
+          <div class="input-group">
+            <label>Mobile Number (Optional)</label>
+            <input type="text" formControlName="mobile_number" placeholder="10-digit number" />
+          </div>
+
+          <div class="input-group">
+            <label>Assign Organization *</label>
+            <select formControlName="organization_uuid" class="form-select">
+              <option value="" disabled selected>Select Organization...</option>
+              <option *ngFor="let org of organizations" [value]="org.uuid">
+                {{ org.name }}
+              </option>
+            </select>
+          </div>
+
+          <button type="submit" [disabled]="adminForm.invalid" class="submit-modal-btn">
+            Create Admin Account
+          </button>
+        </form>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+</ion-content>

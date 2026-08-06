@@ -1,0 +1,857 @@
+<ion-split-pane contentId="main-content" when="md">
+  <!-- Left Sidebar (Sliding Menu) -->
+  <ion-menu menuId="main-menu" contentId="main-content" type="overlay">
+    <ion-content class="sidebar-bg">
+      <div class="sidebar-header">
+        <div class="logo-box">
+          <ion-icon name="wallet-outline"></ion-icon>
+        </div>
+        <h2>LendFlow</h2>
+        <p>{{ currentUser?.organization_name || 'Tenant Workspace' }}</p>
+      </div>
+
+      <div class="menu-divider">MENU</div>
+
+      <ion-list class="menu-list" lines="none">
+        <ion-item button (click)="selectTab('users')" [class.active-item]="activeTab === 'users'" class="menu-item">
+          <ion-icon name="people-outline" slot="start"></ion-icon>
+          <ion-label>Users (Employees)</ion-label>
+        </ion-item>
+        
+        <ion-item button (click)="selectTab('customers')" [class.active-item]="activeTab === 'customers'" class="menu-item">
+          <ion-icon name="person-add-outline" slot="start"></ion-icon>
+          <ion-label>Customers</ion-label>
+        </ion-item>
+
+        <ion-item button (click)="selectTab('loans')" [class.active-item]="activeTab === 'loans'" class="menu-item">
+          <ion-icon name="cash-outline" slot="start"></ion-icon>
+          <ion-label>Loans</ion-label>
+        </ion-item>
+
+        <ion-item button (click)="selectTab('collection')" [class.active-item]="activeTab === 'collection'" class="menu-item">
+          <ion-icon name="wallet-outline" slot="start"></ion-icon>
+          <ion-label>Collection</ion-label>
+        </ion-item>
+
+        <ion-item button (click)="selectTab('reports')" [class.active-item]="activeTab === 'reports'" class="menu-item">
+          <ion-icon name="analytics-outline" slot="start"></ion-icon>
+          <ion-label>Reports</ion-label>
+        </ion-item>
+      </ion-list>
+
+      <div class="sidebar-footer">
+        <button class="logout-btn" (click)="logout()">
+          <ion-icon name="log-out-outline"></ion-icon> Sign Out
+        </button>
+      </div>
+    </ion-content>
+  </ion-menu>
+
+  <!-- Main View Area -->
+  <div class="ion-page" id="main-content">
+    <ion-header class="ion-no-border glass-header">
+      <ion-toolbar>
+        <ion-buttons slot="start">
+          <ion-menu-button menu="main-menu" color="light"></ion-menu-button>
+        </ion-buttons>
+        <ion-title>Admin Dashboard</ion-title>
+      </ion-toolbar>
+    </ion-header>
+
+    <ion-content [fullscreen]="true" class="dashboard-bg">
+      <div class="header-banner">
+        <h2>{{ activeTab | uppercase }}</h2>
+        <p>{{ currentUser?.organization_name || 'Organization Workspace' }}</p>
+      </div>
+
+      <div class="content-container">
+
+        <!-- TAB: USERS (EMPLOYEES) -->
+        <div *ngIf="activeTab === 'users'" class="tab-content">
+          <div class="section-card glass-panel">
+            <div class="card-header">
+              <h3>Organization Employees</h3>
+              <button class="action-btn" (click)="isAddEmployeeOpen = true">
+                <ion-icon name="person-add-outline" slot="start"></ion-icon> Add Employee
+              </button>
+            </div>
+
+            <div class="employees-list">
+              <div *ngIf="employees.length === 0" class="empty-state">
+                <ion-icon name="people-outline"></ion-icon>
+                <p>No employees registered under this tenant.</p>
+              </div>
+
+              <div *ngFor="let emp of employees" class="employee-card">
+                <div class="emp-info">
+                  <h4>{{ emp.name }}</h4>
+                  <p>Username: {{ emp.username }} • Mob: {{ emp.mobile_number || 'N/A' }}</p>
+                  <div class="perm-badges">
+                    <span class="badge" [class.granted]="emp.can_disburse_loans">Disburse</span>
+                    <span class="badge" [class.granted]="emp.can_collect_payments">Collect</span>
+                    <span class="badge" [class.granted]="emp.can_view_reports">Reports</span>
+                  </div>
+                </div>
+
+                <div class="emp-actions">
+                  <button class="manage-btn" (click)="openPermissionsModal(emp)">
+                    Manage Role
+                  </button>
+                  <button class="status-toggle-btn" [class.disabled]="emp.status !== 'active'" (click)="toggleStatus(emp)">
+                    {{ emp.status === 'active' ? 'Active' : 'Disabled' }}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB: CUSTOMERS -->
+        <div *ngIf="activeTab === 'customers'" class="tab-content">
+          <div class="section-card glass-panel">
+            <div class="card-header">
+              <h3>Customers Directory</h3>
+              <button class="action-btn-green" routerLink="/add-customer">
+                <ion-icon name="person-add-outline" slot="start"></ion-icon> Register Customer
+              </button>
+            </div>
+
+            <div class="search-bar-container" style="padding: 0 20px 16px;">
+              <ion-searchbar [(ngModel)]="directoryCustomerSearchQuery" placeholder="Search by name or place..." mode="ios" style="padding: 0;"></ion-searchbar>
+            </div>
+
+            <div class="customers-list">
+              <div *ngIf="getFilteredCustomers().length === 0" class="empty-state">
+                <ion-icon name="person-outline"></ion-icon>
+                <p>No customers found.</p>
+              </div>
+
+              <div *ngFor="let cust of getFilteredCustomers()" class="customer-card">
+                <div class="avatar-circle">
+                  {{ cust.name.charAt(0).toUpperCase() }}
+                </div>
+                <div class="details" style="flex: 1;">
+                  <h4>{{ cust.name }}</h4>
+                  <p>{{ cust.mobile_number }} • Place: {{ cust.place }}</p>
+                </div>
+                <button class="manage-btn" (click)="manageCustomer(cust)">
+                  Manage
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB: LOANS -->
+        <div *ngIf="activeTab === 'loans'" class="tab-content">
+          <div class="section-card glass-panel">
+            <div class="card-header">
+              <h3>Active Disbursements</h3>
+              <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                <button class="action-btn-green" (click)="isAccountsGridOpen = !isAccountsGridOpen">
+                  <ion-icon name="grid-outline" slot="start"></ion-icon> Account Numbers
+                </button>
+                <button class="action-btn" (click)="openAddLoanModal()">
+                  <ion-icon name="cash-outline" slot="start"></ion-icon> Create Loan
+                </button>
+              </div>
+            </div>
+
+            <!-- Account Numbers Calendar Grid Overlay -->
+            <div *ngIf="isAccountsGridOpen" class="account-grid-card">
+              <div class="grid-card-header">
+                <span><ion-icon name="calendar-outline"></ion-icon> Active Loan Account Grid (Tap to jump)</span>
+                <ion-icon name="close-circle-outline" (click)="isAccountsGridOpen = false" class="close-icon"></ion-icon>
+              </div>
+              <div *ngIf="getActiveLoans().length === 0" class="empty-grid-msg">
+                No active loan accounts available.
+              </div>
+              <div *ngIf="getActiveLoans().length > 0" class="account-grid-container">
+                <div *ngFor="let item of getActiveLoans()" class="acc-tile" (click)="scrollToLoan(item.uuid)">
+                  <div class="tile-accno">#{{ item.accno }}</div>
+                  <div class="tile-name">{{ item.customer_name }}</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="search-bar-container" style="padding: 0 20px 16px;">
+              <ion-searchbar [(ngModel)]="directoryLoanSearchQuery" placeholder="Search by acc no or name..." mode="ios" style="padding: 0;"></ion-searchbar>
+            </div>
+
+            <div class="loans-list">
+              <div *ngIf="loans.length === 0" class="empty-state">
+                <ion-icon name="cash-outline"></ion-icon>
+                <p>No active loans disbursed under this tenant.</p>
+              </div>
+
+              <ion-segment *ngIf="loans.length > 0" [(ngModel)]="selectedLoanTab" mode="ios" style="margin-bottom: 16px; background: rgba(255, 255, 255, 0.03);">
+                <ion-segment-button value="active">
+                  <ion-label>Active Loans ({{ getActiveLoansList().length }})</ion-label>
+                </ion-segment-button>
+                <ion-segment-button value="cleared">
+                  <ion-label>Cleared Loans ({{ getClosedLoansList().length }})</ion-label>
+                </ion-segment-button>
+              </ion-segment>
+
+              <!-- Active Loans Section -->
+              <div *ngIf="selectedLoanTab === 'active'">
+                <div *ngIf="getActiveLoansList().length === 0" class="empty-state">
+                  <p>No active loans found.</p>
+                </div>
+                <div *ngFor="let loan of getActiveLoansList()" 
+                     [id]="'loan-card-' + loan.uuid" 
+                     class="loan-card" 
+                     [class.highlighted-card]="highlightedLoanUuid === loan.uuid"
+                     [class.ready-to-close]="getLoanBalance(loan) <= 0"
+                     (click)="openLoanDetails(loan)"
+                     style="cursor: pointer; margin-bottom: 12px;">
+                  <div class="loan-info">
+                    <div class="title-row">
+                      <h4>{{ loan.customer_name }}</h4>
+                      <div style="display: flex; gap: 8px; align-items: center;">
+                        <span class="status-badge">
+                          {{ loan.status }}
+                        </span>
+                        <button class="manage-btn" (click)="manageLoan(loan); $event.stopPropagation();" style="font-size: 9px; padding: 3px 8px; border-radius: 4px;">
+                          Manage
+                        </button>
+                      </div>
+                    </div>
+                    <p class="acc-no">Acc No: {{ loan.accno }}</p>
+                    <p style="font-size: 10px; color: #00f5d4; font-weight: 700; margin: 4px 0 0 0;">
+                      Other Active Loans: {{ getOtherActiveLoanNumbers(loan.customer_uuid, loan.uuid) }}
+                    </p>
+
+                    <div class="financials-grid">
+                      <div class="fin-item">
+                        <span class="label">Principal</span>
+                        <span class="val">₹{{ loan.loan_amount }}</span>
+                      </div>
+                      <div class="fin-item">
+                        <span class="label">Rate (%)</span>
+                        <span class="val">{{ loan.interest_rate }}%</span>
+                      </div>
+                      <div class="fin-item">
+                        <span class="label">Balance</span>
+                        <span class="val highlighted">₹{{ getLoanBalance(loan) }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Cleared Loans Section -->
+              <div *ngIf="selectedLoanTab === 'cleared'">
+                <div *ngIf="getClosedLoansList().length === 0" class="empty-state">
+                  <p>No cleared loans yet.</p>
+                </div>
+                <div *ngFor="let loan of getClosedLoansList()" 
+                     [id]="'loan-card-' + loan.uuid" 
+                     class="loan-card loan-cleared" 
+                     [class.highlighted-card]="highlightedLoanUuid === loan.uuid"
+                     (click)="openLoanDetails(loan)"
+                     style="cursor: pointer; margin-bottom: 12px;">
+                  <div class="loan-info">
+                    <div class="title-row">
+                      <h4>{{ loan.customer_name }}</h4>
+                      <div style="display: flex; gap: 8px; align-items: center;">
+                        <span class="status-badge closed" style="background: rgba(46, 204, 113, 0.25); color: #2ecc71;">
+                          <ion-icon name="checkmark-circle-outline"></ion-icon> CLEARED
+                        </span>
+                        <button class="manage-btn" (click)="manageLoan(loan); $event.stopPropagation();" style="font-size: 9px; padding: 3px 8px; border-radius: 4px;">
+                          Manage
+                        </button>
+                      </div>
+                    </div>
+                    <p class="acc-no">Acc No: {{ loan.accno }}</p>
+                    <p style="font-size: 10px; color: #00f5d4; font-weight: 700; margin: 4px 0 0 0;">
+                      Other Active Loans: {{ getOtherActiveLoanNumbers(loan.customer_uuid, loan.uuid) }}
+                    </p>
+                    
+                    <div class="financials-grid">
+                      <div class="fin-item">
+                        <span class="label">Principal</span>
+                        <span class="val">₹{{ loan.loan_amount }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB: COLLECTION -->
+        <div *ngIf="activeTab === 'collection'" class="tab-content">
+          <div class="section-card glass-panel">
+            <div class="card-header">
+              <h3>Collection Center</h3>
+            </div>
+            
+            <div class="collections-container">
+              <!-- Left side: Form -->
+              <div class="collection-form-side">
+                <div *ngIf="!selectedLoanForCollection">
+                  <div class="input-group">
+                    <label>Search Active Loan *</label>
+                    <div class="search-wrapper">
+                      <ion-icon name="search-outline"></ion-icon>
+                      <input type="text" [value]="loanSearchQuery" (input)="onSearchLoan($event)" placeholder="Search Account No or Name..." />
+                    </div>
+                  </div>
+
+                  <div class="dropdown-customers-list">
+                    <p class="list-title">Search Results:</p>
+                    <div class="results-container">
+                      <div *ngFor="let loan of filteredLoansForCollection" class="select-cust-row" (click)="selectLoanForCollection(loan)">
+                        <span>{{ loan.accno }} - {{ loan.customer_name }}</span>
+                        <ion-icon name="chevron-forward-outline"></ion-icon>
+                      </div>
+                      <p class="no-results" *ngIf="filteredLoansForCollection.length === 0">
+                        No active loans found.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div *ngIf="selectedLoanForCollection" class="active-collection-panel">
+                  <div class="selected-customer-banner" style="margin-bottom: 16px;">
+                    <ion-icon name="cash-outline"></ion-icon>
+                    <div style="flex: 1;">
+                      <p class="name">{{ selectedLoanForCollection.customer_name }} ({{ selectedLoanForCollection.accno }})</p>
+                      <div class="mini-stats">
+                        <span>Total: ₹{{ selectedLoanForCollection.total_repayable }}</span>
+                        <span class="highlighted">Balance Due: ₹{{ selectedLoanBalance }}</span>
+                      </div>
+                    </div>
+                    <ion-button fill="clear" color="danger" (click)="clearCollectionSelection()">
+                      <ion-icon name="close-circle-outline" slot="icon-only"></ion-icon>
+                    </ion-button>
+                  </div>
+
+                  <form [formGroup]="collectionForm" (ngSubmit)="onRecordCollection()">
+                    <div class="input-group">
+                      <label>Amount Collected (₹) *</label>
+                      <input type="number" formControlName="collected_amount" placeholder="Enter amount..." />
+                    </div>
+                    <div class="input-group">
+                      <label>Payment Type *</label>
+                      <select formControlName="payment_type" style="padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white;">
+                        <option value="Cash">Cash</option>
+                        <option value="Online">Online</option>
+                      </select>
+                    </div>
+                    <button type="submit" [disabled]="collectionForm.invalid" class="submit-modal-btn">
+                      Record Payment
+                    </button>
+                  </form>
+                </div>
+              </div>
+              
+              <!-- Right side: List -->
+              <div class="collection-list-side">
+                <h4>Today's Collections</h4>
+                <div *ngIf="getTodayCollections().length === 0" class="empty-state" style="padding: 20px;">
+                  <ion-icon name="receipt-outline"></ion-icon>
+                  <p>No collections recorded today.</p>
+                </div>
+
+                <div class="collection-logs">
+                  <div *ngFor="let col of getTodayCollections()" class="col-log-card">
+                    <div class="col-log-header">
+                      <span class="rcpt">
+                        {{ col.receipt_no || 'Pending Sync' }}
+                        <ion-icon name="create-outline" style="cursor: pointer; color: #4361ee; margin-left: 6px;" (click)="openEditCollectionModal(col)"></ion-icon>
+                      </span>
+                      <span class="amt">₹{{ col.collected_amount }}</span>
+                    </div>
+                    <p class="details">{{ col.customer_name }} ({{ col.accno }})</p>
+                    <p class="meta">
+                      By: {{ col.collected_by_name || currentUser?.name }} • 
+                      {{ col.collection_date | date:'short' }} •
+                      <ion-icon [name]="col.payment_type === 'Online' ? 'phone-portrait-outline' : 'cash-outline'"></ion-icon> {{ col.payment_type || 'Cash' }}
+                      <span class="badge" *ngIf="col.sync_status" [ngClass]="{'pending': col.sync_status === 'Pending'}">
+                        {{ col.sync_status }}
+                      </span>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB: REPORTS -->
+        <div *ngIf="activeTab === 'reports'" class="tab-content">
+          <div class="glass-panel text-center" style="padding: 40px; color: #8f9299;">
+            <ion-icon name="analytics-outline" style="font-size: 48px; color: #ff0054; margin-bottom: 12px;"></ion-icon>
+            <h3>Reports & Analytics</h3>
+            <p>Performance indicators, employee target sheets, and collection audits will display here in the next step.</p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Add Employee Modal -->
+      <ion-modal [isOpen]="isAddEmployeeOpen" (didDismiss)="isAddEmployeeOpen = false" class="glass-modal">
+        <ng-template>
+          <ion-header class="ion-no-border">
+            <ion-toolbar>
+              <ion-title>Create Employee</ion-title>
+              <ion-buttons slot="end">
+                <ion-button (click)="isAddEmployeeOpen = false">Close</ion-button>
+              </ion-buttons>
+            </ion-toolbar>
+          </ion-header>
+
+          <ion-content class="modal-bg">
+            <form [formGroup]="employeeForm" (ngSubmit)="onCreateEmployee()" class="modal-form">
+              <div class="input-group">
+                <label>Full Name *</label>
+                <input type="text" formControlName="name" placeholder="E.g., John Doe" />
+              </div>
+
+              <div class="input-group">
+                <label>Username (Login ID) *</label>
+                <input type="text" formControlName="username" placeholder="E.g., john123" />
+              </div>
+
+              <div class="input-group">
+                <label>Password *</label>
+                <input type="password" formControlName="password" placeholder="Min. 6 characters..." />
+              </div>
+
+              <div class="input-group">
+                <label>Mobile Number (Optional)</label>
+                <input type="text" formControlName="mobile_number" placeholder="10-digit number" />
+              </div>
+
+              <div class="permissions-section">
+                <h4>Set Account Permissions</h4>
+                
+                <div class="checkbox-item">
+                  <ion-checkbox formControlName="can_disburse_loans"></ion-checkbox>
+                  <ion-label>Can disburse and create loans</ion-label>
+                </div>
+
+                <div class="checkbox-item">
+                  <ion-checkbox formControlName="can_collect_payments"></ion-checkbox>
+                  <ion-label>Can collect customer payments</ion-label>
+                </div>
+
+                <div class="checkbox-item">
+                  <ion-checkbox formControlName="can_view_reports"></ion-checkbox>
+                  <ion-label>Can view organization financial reports</ion-label>
+                </div>
+              </div>
+
+              <button type="submit" [disabled]="employeeForm.invalid" class="submit-modal-btn">
+                Register Employee
+              </button>
+            </form>
+          </ion-content>
+        </ng-template>
+      </ion-modal>
+
+      <!-- Manage Permissions Modal -->
+      <ion-modal [isOpen]="isManagePermissionsOpen" (didDismiss)="isManagePermissionsOpen = false" class="glass-modal">
+        <ng-template>
+          <ion-header class="ion-no-border">
+            <ion-toolbar>
+              <ion-title>Manage Role: {{ selectedEmployeeForPermissions?.name }}</ion-title>
+              <ion-buttons slot="end">
+                <ion-button (click)="isManagePermissionsOpen = false">Close</ion-button>
+              </ion-buttons>
+            </ion-toolbar>
+          </ion-header>
+
+          <ion-content class="modal-bg">
+            <form [formGroup]="permissionForm" (ngSubmit)="onUpdatePermissions()" class="modal-form">
+              <div class="permissions-section" style="margin-top: 0;">
+                <h4>Toggle authorized operations for this account:</h4>
+
+                <div class="checkbox-item">
+                  <ion-checkbox formControlName="can_disburse_loans"></ion-checkbox>
+                  <ion-label>Authorized to disburse loans</ion-label>
+                </div>
+
+                <div class="checkbox-item">
+                  <ion-checkbox formControlName="can_collect_payments"></ion-checkbox>
+                  <ion-label>Authorized to collect payments</ion-label>
+                </div>
+
+                <div class="checkbox-item">
+                  <ion-checkbox formControlName="can_view_reports"></ion-checkbox>
+                  <ion-label>Authorized to view financial reports</ion-label>
+                </div>
+              </div>
+
+              <button type="submit" class="submit-modal-btn">
+                Save Permission Config
+              </button>
+            </form>
+          </ion-content>
+        </ng-template>
+      </ion-modal>
+
+      <!-- Create Loan Modal -->
+      <ion-modal [isOpen]="isAddLoanOpen" (didDismiss)="isAddLoanOpen = false" class="glass-modal">
+        <ng-template>
+          <ion-header class="ion-no-border">
+            <ion-toolbar>
+              <ion-title>Disburse New Loan</ion-title>
+              <ion-buttons slot="end">
+                <ion-button (click)="isAddLoanOpen = false">Close</ion-button>
+              </ion-buttons>
+            </ion-toolbar>
+          </ion-header>
+
+          <ion-content class="modal-bg">
+            <div class="modal-form">
+              <!-- Search Customer Box -->
+              <div class="input-group">
+                <label>Search Customer *</label>
+                <div class="search-wrapper">
+                  <ion-icon name="search-outline"></ion-icon>
+                  <input type="text" [value]="customerSearchQuery" (input)="onSearchCustomer($event)" placeholder="Search by name or mobile..." />
+                </div>
+              </div>
+
+              <!-- Selected Customer Box -->
+              <div *ngIf="selectedCustomerForLoan" class="selected-customer-banner">
+                <ion-icon name="checkmark-circle-outline"></ion-icon>
+                <div>
+                  <p class="name">{{ selectedCustomerForLoan.name }}</p>
+                  <p class="desc">Mobile: {{ selectedCustomerForLoan.mobile_number }} • Place: {{ selectedCustomerForLoan.place }}</p>
+                </div>
+              </div>
+
+              <!-- Customer Results Selection List -->
+              <div class="dropdown-customers-list" *ngIf="!selectedCustomerForLoan">
+                <p class="list-title">Search Results (Select one below):</p>
+                <div class="results-container">
+                  <div *ngFor="let cust of filteredCustomersForLoan" class="select-cust-row" (click)="selectCustomer(cust)">
+                    <span>{{ cust.name }} ({{ cust.place }})</span>
+                    <ion-icon name="chevron-forward-outline"></ion-icon>
+                  </div>
+                  <p class="no-results" *ngIf="filteredCustomersForLoan.length === 0">
+                    No customers match your search
+                  </p>
+                </div>
+              </div>
+
+              <!-- Form Inputs -->
+              <form [formGroup]="loanForm" (ngSubmit)="onCreateLoan()" class="modal-inner-form" style="display: flex; flex-direction: column; gap: 16px;">
+                <div class="input-group">
+                  <label>Account Number (Acc No) *</label>
+                  <input type="text" formControlName="accno" placeholder="E.g., LF-10029" />
+                </div>
+
+                <div class="input-group">
+                  <label>Principal Amount (Loan Amount) *</label>
+                  <input type="number" formControlName="loan_amount" placeholder="E.g., 10000" />
+                </div>
+
+                <div class="input-row">
+                  <div class="input-group">
+                    <label>Interest Rate (%) *</label>
+                    <input type="number" formControlName="interest_rate" placeholder="10" />
+                  </div>
+
+                  <div class="input-group">
+                    <label>Interest Amount (₹) *</label>
+                    <input type="number" formControlName="interest_amount" placeholder="1000" />
+                  </div>
+                </div>
+
+                <div class="input-group">
+                  <label>Total Repayable (Auto)</label>
+                  <input type="text" formControlName="total_repayable" placeholder="Calculated sum" class="disabled-view" />
+                </div>
+
+                <button type="submit" [disabled]="loanForm.invalid || !selectedCustomerForLoan" class="submit-modal-btn">
+                  Disburse Loan
+                </button>
+              </form>
+            </div>
+          </ion-content>
+        </ng-template>
+      </ion-modal>
+
+      <!-- Edit Customer Modal -->
+      <ion-modal [isOpen]="isEditCustomerOpen" (didDismiss)="isEditCustomerOpen = false" class="glass-modal">
+        <ng-template>
+          <ion-header class="ion-no-border">
+            <ion-toolbar>
+              <ion-title>Edit Profile: {{ selectedCustomerForManage?.name }}</ion-title>
+              <ion-buttons slot="end">
+                <ion-button (click)="isEditCustomerOpen = false">Close</ion-button>
+              </ion-buttons>
+            </ion-toolbar>
+          </ion-header>
+
+          <ion-content class="modal-bg">
+            <form [formGroup]="editCustomerForm" (ngSubmit)="onUpdateCustomer()" class="modal-form" style="display: flex; flex-direction: column; gap: 16px; padding: 20px;">
+              <div class="input-group">
+                <label>Customer Full Name *</label>
+                <input type="text" formControlName="name" placeholder="Full Name" />
+              </div>
+
+              <div class="input-row">
+                <div class="input-group">
+                  <label>Mobile Number *</label>
+                  <input type="text" formControlName="mobile_number" placeholder="10-digit Mobile" />
+                </div>
+
+                <div class="input-group">
+                  <label>Place *</label>
+                  <input type="text" formControlName="place" placeholder="E.g., Nagar, Guntur" />
+                </div>
+              </div>
+
+              <div class="input-row">
+                <div class="input-group">
+                  <label>Father's Name (Optional)</label>
+                  <input type="text" formControlName="father_name" placeholder="Father's name" />
+                </div>
+
+                <div class="input-group">
+                  <label>Occupation (Optional)</label>
+                  <input type="text" formControlName="occupation" placeholder="E.g., Farmer" />
+                </div>
+              </div>
+
+              <div class="input-row">
+                <div class="input-group">
+                  <label>Aadhaar Number (Optional)</label>
+                  <input type="text" formControlName="aadhaar_number" placeholder="12-digit" />
+                </div>
+
+                <div class="input-group">
+                  <label>PAN Card Number (Optional)</label>
+                  <input type="text" formControlName="pan_number" placeholder="ABCDE1234F" />
+                </div>
+              </div>
+
+              <div class="input-row">
+                <div class="input-group">
+                  <label>Guarantor Name (Optional)</label>
+                  <input type="text" formControlName="guarantor_name" placeholder="Guarantor name" />
+                </div>
+
+                <div class="input-group">
+                  <label>Guarantor Mobile (Optional)</label>
+                  <input type="text" formControlName="guarantor_mobile" placeholder="10-digit mobile" />
+                </div>
+              </div>
+
+              <div class="input-group">
+                <label>Full Residential Address (Optional)</label>
+                <textarea formControlName="address" rows="2" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 12px; color: white; resize: none; outline: none;"></textarea>
+              </div>
+
+              <div class="input-group">
+                <label>Notes / Special Instructions (Optional)</label>
+                <textarea formControlName="notes" rows="2" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; padding: 12px; color: white; resize: none; outline: none;"></textarea>
+              </div>
+
+              <button type="submit" [disabled]="editCustomerForm.invalid" class="submit-modal-btn">
+                Save Profile Changes
+              </button>
+            </form>
+          </ion-content>
+        </ng-template>
+      </ion-modal>
+
+      <!-- Edit Loan Modal -->
+      <ion-modal [isOpen]="isEditLoanOpen" (didDismiss)="isEditLoanOpen = false" class="glass-modal">
+        <ng-template>
+          <ion-header class="ion-no-border">
+            <ion-toolbar>
+              <ion-title>Edit Loan: {{ selectedLoanForManage?.accno }}</ion-title>
+              <ion-buttons slot="end">
+                <ion-button (click)="isEditLoanOpen = false">Close</ion-button>
+              </ion-buttons>
+            </ion-toolbar>
+          </ion-header>
+
+          <ion-content class="modal-bg">
+            <div class="modal-form">
+              <div class="selected-customer-banner" style="background: rgba(67, 97, 238, 0.08); border-color: rgba(67, 97, 238, 0.2);">
+                <ion-icon name="person-outline" style="color: #4361ee;"></ion-icon>
+                <div>
+                  <p class="name">{{ selectedLoanForManage?.customer_name }}</p>
+                  <p class="desc">Mobile: {{ selectedLoanForManage?.customer_mobile }}</p>
+                </div>
+              </div>
+
+              <form [formGroup]="editLoanForm" (ngSubmit)="onUpdateLoan()" class="modal-inner-form" style="display: flex; flex-direction: column; gap: 16px; margin-top: 16px;">
+                <div class="input-group">
+                  <label>Account Number (Acc No) *</label>
+                  <input type="text" formControlName="accno" placeholder="E.g., LF-10029" />
+                </div>
+
+                <div class="input-group">
+                  <label>Principal Amount (Loan Amount) *</label>
+                  <input type="number" formControlName="loan_amount" placeholder="E.g., 10000" />
+                </div>
+
+                <div class="input-row">
+                  <div class="input-group">
+                    <label>Interest Rate (%) *</label>
+                    <input type="number" formControlName="interest_rate" placeholder="10" />
+                  </div>
+
+                  <div class="input-group">
+                    <label>Interest Amount (₹) *</label>
+                    <input type="number" formControlName="interest_amount" placeholder="1000" />
+                  </div>
+                </div>
+
+                <div class="input-group">
+                  <label>Total Repayable (Auto)</label>
+                  <input type="text" formControlName="total_repayable" placeholder="Calculated sum" class="disabled-view" />
+                </div>
+
+                <div class="input-group">
+                  <label>Loan Status *</label>
+                  <select formControlName="status" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; height: 48px; padding: 0 16px; color: #ffffff; font-size: 14px; outline: none; -webkit-appearance: none; -moz-appearance: none; appearance: none;">
+                    <option value="active" style="background: #0f172a;">Active</option>
+                    <option value="closed" style="background: #0f172a;">Closed</option>
+                  </select>
+                </div>
+
+                <button type="submit" [disabled]="editLoanForm.invalid" class="submit-modal-btn">
+                  Save Changes
+                </button>
+              </form>
+            </div>
+          </ion-content>
+        </ng-template>
+      </ion-modal>
+
+      <!-- Loan Details Modal -->
+      <ion-modal [isOpen]="isLoanDetailsOpen" (didDismiss)="isLoanDetailsOpen = false" class="glass-modal">
+        <ng-template>
+          <ion-header class="ion-no-border">
+            <ion-toolbar>
+              <ion-title>Loan Details</ion-title>
+              <ion-buttons slot="end">
+                <ion-button (click)="isLoanDetailsOpen = false" color="light">
+                  <ion-icon name="close-circle-outline"></ion-icon>
+                </ion-button>
+              </ion-buttons>
+            </ion-toolbar>
+          </ion-header>
+
+          <ion-content class="modal-bg">
+            <div class="modal-form" *ngIf="selectedDetailedLoan">
+              
+              <div class="selected-customer-banner" style="margin-bottom: 0;">
+                <ion-icon name="person-circle-outline"></ion-icon>
+                <div style="flex: 1;">
+                  <p class="name">{{ selectedDetailedLoan.customer_name }} ({{ selectedDetailedLoan.accno }})</p>
+                  <div style="font-size: 11px; margin-top: 8px; color: #8f9299;">
+                    Other Active Loans: {{ getOtherActiveLoanNumbers(selectedDetailedLoan.customer_uuid, selectedDetailedLoan.uuid) }}
+                  </div>
+                </div>
+              </div>
+
+              <div class="details-grid">
+                <!-- Financials -->
+                <div class="details-card">
+                  <h5>Financial Summary</h5>
+                  <div class="financials-grid" style="margin-top: 0; border-top: none; padding-top: 0;">
+                    <div class="fin-item">
+                      <span class="label">Principal</span>
+                      <span class="val">₹{{ selectedDetailedLoan.loan_amount }}</span>
+                    </div>
+                    <div class="fin-item">
+                      <span class="label">Repayable</span>
+                      <span class="val">₹{{ selectedDetailedLoan.total_repayable }}</span>
+                    </div>
+                    <div class="fin-item">
+                      <span class="label">Total Paid</span>
+                      <span class="val" style="color: #4361ee;">₹{{ getLoanTotalPaid(selectedDetailedLoan.uuid) }}</span>
+                    </div>
+                    <div class="fin-item">
+                      <span class="label">Balance</span>
+                      <span class="val highlighted">₹{{ getLoanBalance(selectedDetailedLoan) }}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Payment History -->
+                <div class="details-card">
+                  <h5>Payment History</h5>
+                  <div class="history-list">
+                    <div *ngIf="getLoanHistory(selectedDetailedLoan.uuid).length === 0" class="no-history">
+                      No payments have been recorded for this loan.
+                    </div>
+                    
+                    <div *ngFor="let payment of getLoanHistory(selectedDetailedLoan.uuid)" class="history-item">
+                      <div>
+                        <div class="hist-date">
+                          {{ payment.collection_date | date:'medium' }}
+                          <ion-icon name="create-outline" style="cursor: pointer; color: #4361ee; margin-left: 8px;" *ngIf="selectedDetailedLoan.status === 'active'" (click)="openEditCollectionModal(payment)"></ion-icon>
+                        </div>
+                        <div class="hist-by">
+                          By: {{ payment.collected_by_name || 'System' }} • 
+                          <ion-icon [name]="payment.payment_type === 'Online' ? 'phone-portrait-outline' : 'cash-outline'"></ion-icon> {{ payment.payment_type || 'Cash' }}
+                        </div>
+                      </div>
+                      <div class="hist-amt">₹{{ payment.collected_amount }}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </ion-content>
+        </ng-template>
+      </ion-modal>
+
+      <!-- Edit Collection Modal -->
+      <ion-modal [isOpen]="isEditCollectionOpen" (didDismiss)="closeEditCollectionModal()" class="glass-modal">
+        <ng-template>
+          <ion-header class="ion-no-border">
+            <ion-toolbar style="--background: transparent;">
+              <ion-title style="color: #ffffff; font-weight: 700;">Edit Collection</ion-title>
+              <ion-buttons slot="end">
+                <ion-button (click)="closeEditCollectionModal()" style="color: #ffffff;">Close</ion-button>
+              </ion-buttons>
+            </ion-toolbar>
+          </ion-header>
+
+          <ion-content class="modal-bg">
+            <div style="padding: 20px;">
+              <form [formGroup]="editCollectionForm" (ngSubmit)="onSubmitEditCollection()" *ngIf="selectedEditCollection" class="modal-form" style="display: flex; flex-direction: column; gap: 16px;">
+                <div class="input-group">
+                  <label>Collected Amount (₹) *</label>
+                  <input type="number" formControlName="collected_amount" />
+                </div>
+                <div class="input-group">
+                  <label>Collection Date *</label>
+                  <input type="datetime-local" formControlName="collection_date" />
+                </div>
+                <div class="input-group">
+                  <label>Payment Type *</label>
+                  <select formControlName="payment_type" style="padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.2); color: white;">
+                    <option value="Cash">Cash</option>
+                    <option value="Online">Online</option>
+                  </select>
+                </div>
+                
+                <button type="submit" [disabled]="editCollectionForm.invalid" class="submit-modal-btn">
+                  Save Changes
+                </button>
+              </form>
+            </div>
+          </ion-content>
+        </ng-template>
+      </ion-modal>
+
+    </ion-content>
+  </div>
+</ion-split-pane>
