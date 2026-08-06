@@ -30,7 +30,12 @@
 
         <ion-item button (click)="selectTab('collection')" [class.active-item]="activeTab === 'collection'" class="menu-item">
           <ion-icon name="wallet-outline" slot="start"></ion-icon>
-          <ion-label>Collection</ion-label>
+          <ion-label>Today's Collection</ion-label>
+        </ion-item>
+
+        <ion-item button (click)="selectTab('total-collections')" [class.active-item]="activeTab === 'total-collections'" class="menu-item">
+          <ion-icon name="list-circle-outline" slot="start"></ion-icon>
+          <ion-label>Total Collections</ion-label>
         </ion-item>
 
         <ion-item button (click)="selectTab('reports')" [class.active-item]="activeTab === 'reports'" class="menu-item">
@@ -377,6 +382,38 @@
                     </p>
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB: TOTAL COLLECTIONS -->
+        <div *ngIf="activeTab === 'total-collections'" class="tab-content">
+          <div class="section-card glass-panel">
+            <div class="card-header">
+              <h3>All Collections (Date Wise)</h3>
+            </div>
+            
+            <div class="collection-logs" style="max-width: 800px; margin: 0 auto;">
+              <div *ngIf="getAllCollectionsSorted().length === 0" class="empty-state" style="padding: 40px;">
+                <ion-icon name="receipt-outline"></ion-icon>
+                <p>No collections recorded yet.</p>
+              </div>
+
+              <div *ngFor="let col of getAllCollectionsSorted()" class="col-log-card" style="margin-bottom: 12px; border-radius: 12px; background: rgba(255,255,255,0.02); padding: 16px; border: 1px solid rgba(255,255,255,0.05);">
+                <div class="col-log-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                  <span class="rcpt" style="font-size: 13px; color: #f8fafc; font-weight: 700;">
+                    {{ col.receipt_no || 'Pending Sync' }}
+                    <ion-icon name="create-outline" style="cursor: pointer; color: #10b981; margin-left: 6px;" (click)="openEditCollectionModal(col)"></ion-icon>
+                  </span>
+                  <span class="amt" style="font-size: 16px; color: #10b981; font-weight: 800;">₹{{ col.collected_amount }}</span>
+                </div>
+                <p class="details" style="font-size: 14px; margin: 0 0 4px 0; color: #f8fafc;">{{ col.customer_name }} ({{ col.accno }})</p>
+                <p class="meta" style="font-size: 12px; margin: 0; color: #94a3b8; display: flex; align-items: center; gap: 4px;">
+                  By: {{ col.collected_by_name || currentUser?.name }} • 
+                  {{ col.collection_date | date:'medium' }} •
+                  <ion-icon [name]="col.payment_type === 'Online' ? 'phone-portrait-outline' : 'cash-outline'"></ion-icon> {{ col.payment_type || 'Cash' }}
+                </p>
               </div>
             </div>
           </div>

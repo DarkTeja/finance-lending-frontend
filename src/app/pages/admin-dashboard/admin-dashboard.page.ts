@@ -533,6 +533,13 @@ export class AdminDashboardPage implements OnInit {
     });
   }
 
+  getAllCollectionsSorted(): any[] {
+    // Return all collections sorted by date descending (newest first)
+    return [...this.collections].sort((a, b) => {
+      return new Date(b.collection_date).getTime() - new Date(a.collection_date).getTime();
+    });
+  }
+
   getLoanTotalPaid(loanUuid: string): number {
     return this.collections
       .filter(c => c.loan_uuid === loanUuid)
