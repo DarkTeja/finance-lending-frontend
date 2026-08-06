@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { IonicModule, ToastController, LoadingController, MenuController } from '@ionic/angular';
 import { RouterModule } from '@angular/router';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { ApiService } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
 import { DbService } from '../../services/db.service';
@@ -20,7 +22,8 @@ export class EmployeeDashboardPage implements OnInit {
   customers: any[] = [];
   loans: any[] = [];
   
-  activeTab: 'customers' | 'loans' | 'collection' = 'customers';
+  activeTab: 'customers' | 'loans' | 'collection' | 'total-collections' = 'customers';
+  collectionFilterDate: string = '';
 
   loanForm!: FormGroup;
   
@@ -171,7 +174,7 @@ export class EmployeeDashboardPage implements OnInit {
     });
   }
 
-  selectTab(tab: 'customers' | 'loans' | 'collection') {
+  selectTab(tab: 'customers' | 'loans' | 'collection' | 'total-collections') {
     this.activeTab = tab;
     this.menuCtrl.close();
   }
@@ -434,6 +437,100 @@ export class EmployeeDashboardPage implements OnInit {
       const v = c === 'x' ? r : (r & 0x3 | 0x8);
       return v.toString(16);
     });
+  }
+
+  getAllCollectionsSorted(): any[] {
+    let filtered = [...this.collections];
+    if (this.collectionFilterDate) {
+      const filterDateStr = new Date(this.collectionFilterDate).toDateString();
+      filtered = filtered.filter(col => new Date(col.collection_date).toDateString() === filterDateStr);
+    }
+    return filtered.sort((a, b) => new Date(b.collection_date).getTime() - new Date(a.collection_date).getTime());
+  }
+
+  getEmployeeCollectionSummary(): { name: string, count: number, total: number }[] {
+    const data = this.getAllCollectionsSorted();
+    const summaryMap = new Map<string, { count: number, total: number }>();
+
+    data.forEach(col => {
+      const empName = col.collected_by_name || 'Admin';
+      const amt = parseFloat(col.collected_amount) || 0;
+      
+      if (!summaryMap.has(empName)) {
+        summaryMap.set(empName, { count: 0, total: 0 });
+      }
+      
+      const stat = summaryMap.get(empName)!;
+      stat.count += 1;
+      stat.total += amt;
+    });
+
+    const result = Array.from(summaryMap.entries()).map(([name, stats]) => {
+      return { name, count: stats.count, total: stats.total };
+    });
+
+    return result.sort((a, b) => b.total - a.total);
+  }
+
+  exportToExcel() {
+    const data = this.getAllCollectionsSorted();
+    if (data.length === 0) return;
+
+    let csvContent = 'Account No,Name,Amount,Type,Receipt,Place,Date and Time\n';
+    
+    data.forEach(col => {
+      const d = new Date(col.collection_date);
+      const dateStr = d.toLocaleDateString();
+      const timeStr = d.toLocaleTimeString();
+      const amt = col.collected_amount;
+      const place = col.customer_place || 'N/A';
+      const dateTimeStr = `${dateStr} ${timeStr}`;
+      
+      const row = `"${col.accno}","${col.customer_name}","${amt}","${col.payment_type || 'Cash'}","${col.receipt_no}","${place}","${dateTimeStr}"`;
+      csvContent += row + '\n';
+    });
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    const datePostfix = this.collectionFilterDate ? this.collectionFilterDate : 'All';
+    link.setAttribute('download', `Collections_${datePostfix}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  exportToPdf() {
+    const data = this.getAllCollectionsSorted();
+    if (data.length === 0) return;
+
+    const doc = new jsPDF();
+    const datePostfix = this.collectionFilterDate ? this.collectionFilterDate : 'All';
+    
+    doc.text(`Collections - ${datePostfix}`, 14, 15);
+    
+    const tableData = data.map(col => {
+      const d = new Date(col.collection_date);
+      const place = col.customer_place || 'N/A';
+      return [
+        col.accno,
+        col.customer_name,
+        col.collected_amount,
+        col.payment_type || 'Cash',
+        col.receipt_no,
+        place,
+        `${d.toLocaleDateString()} ${d.toLocaleTimeString()}`
+      ];
+    });
+
+    autoTable(doc, {
+      head: [['Account No', 'Name', 'Amount', 'Type', 'Receipt', 'Place', 'Date & Time']],
+      body: tableData,
+      startY: 20,
+    });
+
+    doc.save(`Collections_${datePostfix}.pdf`);
   }
 
   async logout() {

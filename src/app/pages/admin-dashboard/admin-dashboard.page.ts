@@ -7,6 +7,8 @@ import { ApiService } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
 import { DbService } from '../../services/db.service';
 import { SyncService } from '../../services/sync.service';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 @Component({
   selector: 'app-admin-dashboard',
@@ -21,7 +23,7 @@ export class AdminDashboardPage implements OnInit {
   customers: any[] = [];
   loans: any[] = [];
   
-  activeTab: 'users' | 'customers' | 'loans' | 'collection' | 'reports' = 'users';
+  activeTab: 'users' | 'customers' | 'loans' | 'collection' | 'total-collections' | 'reports' = 'users';
 
   employeeForm!: FormGroup;
   permissionForm!: FormGroup;
@@ -95,13 +97,15 @@ export class AdminDashboardPage implements OnInit {
       mobile_number: ['', [Validators.pattern('^[0-9]{10}$')]],
       can_disburse_loans: [true],
       can_collect_payments: [true],
-      can_view_reports: [false]
+      can_view_reports: [false],
+      can_view_total_collections: [false]
     });
 
     this.permissionForm = this.fb.group({
       can_disburse_loans: [true],
       can_collect_payments: [true],
-      can_view_reports: [false]
+      can_view_reports: [false],
+      can_view_total_collections: [false]
     });
 
     this.loanForm = this.fb.group({
@@ -304,7 +308,7 @@ export class AdminDashboardPage implements OnInit {
     });
   }
 
-  selectTab(tab: 'users' | 'customers' | 'loans' | 'collection' | 'reports') {
+  selectTab(tab: 'users' | 'customers' | 'loans' | 'collection' | 'total-collections' | 'reports') {
     this.activeTab = tab;
     this.menuCtrl.close();
   }
@@ -533,11 +537,117 @@ export class AdminDashboardPage implements OnInit {
     });
   }
 
+  collectionFilterDate: string = new Date().toISOString().split('T')[0];
+
   getAllCollectionsSorted(): any[] {
-    // Return all collections sorted by date descending (newest first)
-    return [...this.collections].sort((a, b) => {
+    let filtered = [...this.collections];
+    if (this.collectionFilterDate) {
+      // Ensure we only compare the YYYY-MM-DD part
+      const filterDateObj = new Date(this.collectionFilterDate);
+      if (!isNaN(filterDateObj.getTime())) {
+        const fy = filterDateObj.getFullYear();
+        const fm = (filterDateObj.getMonth() + 1).toString().padStart(2, '0');
+        const fday = filterDateObj.getDate().toString().padStart(2, '0');
+        const formattedFilterDate = `${fy}-${fm}-${fday}`;
+
+        filtered = filtered.filter(c => {
+          const d = new Date(c.collection_date);
+          const y = d.getFullYear();
+          const m = (d.getMonth() + 1).toString().padStart(2, '0');
+          const day = d.getDate().toString().padStart(2, '0');
+          return `${y}-${m}-${day}` === formattedFilterDate;
+        });
+      }
+    }
+
+    return filtered.sort((a, b) => {
       return new Date(b.collection_date).getTime() - new Date(a.collection_date).getTime();
     });
+  }
+
+  getEmployeeCollectionSummary(): { name: string, count: number, total: number }[] {
+    const data = this.getAllCollectionsSorted();
+    const summaryMap = new Map<string, { count: number, total: number }>();
+
+    data.forEach(col => {
+      const empName = col.collected_by_name || 'Admin';
+      const amt = parseFloat(col.collected_amount) || 0;
+      
+      if (!summaryMap.has(empName)) {
+        summaryMap.set(empName, { count: 0, total: 0 });
+      }
+      
+      const stat = summaryMap.get(empName)!;
+      stat.count += 1;
+      stat.total += amt;
+    });
+
+    const result = Array.from(summaryMap.entries()).map(([name, stats]) => {
+      return { name, count: stats.count, total: stats.total };
+    });
+
+    return result.sort((a, b) => b.total - a.total);
+  }
+
+  exportToExcel() {
+    const data = this.getAllCollectionsSorted();
+    if (data.length === 0) return;
+
+    let csvContent = 'Account No,Name,Amount,Type,Receipt,Place,Date and Time\n';
+    
+    data.forEach(col => {
+      const d = new Date(col.collection_date);
+      const dateStr = d.toLocaleDateString();
+      const timeStr = d.toLocaleTimeString();
+      const amt = col.collected_amount;
+      const place = col.customer_place || 'N/A';
+      const dateTimeStr = `${dateStr} ${timeStr}`;
+      
+      const row = `"${col.accno}","${col.customer_name}","${amt}","${col.payment_type || 'Cash'}","${col.receipt_no}","${place}","${dateTimeStr}"`;
+      csvContent += row + '\n';
+    });
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    const datePostfix = this.collectionFilterDate ? this.collectionFilterDate : 'All';
+    link.setAttribute('download', `Collections_${datePostfix}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  exportToPdf() {
+    const data = this.getAllCollectionsSorted();
+    if (data.length === 0) return;
+
+    const doc = new jsPDF();
+    const datePostfix = this.collectionFilterDate ? this.collectionFilterDate : 'All';
+    
+    doc.text(`Collections - ${datePostfix}`, 14, 15);
+    
+    const tableData = data.map(col => {
+      const d = new Date(col.collection_date);
+      const place = col.customer_place || 'N/A';
+      return [
+        col.accno,
+        col.customer_name,
+        col.collected_amount,
+        col.payment_type || 'Cash',
+        col.receipt_no,
+        place,
+        `${d.toLocaleDateString()} ${d.toLocaleTimeString()}`
+      ];
+    });
+
+    autoTable(doc, {
+      head: [['Account No', 'Name', 'Amount', 'Type', 'Receipt', 'Place', 'Date & Time']],
+      body: tableData,
+      startY: 20,
+    });
+
+    doc.save(`Collections_${datePostfix}.pdf`);
   }
 
   getLoanTotalPaid(loanUuid: string): number {
@@ -631,7 +741,8 @@ export class AdminDashboardPage implements OnInit {
         this.employeeForm.reset({
           can_disburse_loans: true,
           can_collect_payments: true,
-          can_view_reports: false
+          can_view_reports: false,
+          can_view_total_collections: false
         });
         this.loadData();
 
@@ -649,7 +760,8 @@ export class AdminDashboardPage implements OnInit {
     this.permissionForm.patchValue({
       can_disburse_loans: emp.can_disburse_loans === 1 || emp.can_disburse_loans === true,
       can_collect_payments: emp.can_collect_payments === 1 || emp.can_collect_payments === true,
-      can_view_reports: emp.can_view_reports === 1 || emp.can_view_reports === true
+      can_view_reports: emp.can_view_reports === 1 || emp.can_view_reports === true,
+      can_view_total_collections: emp.can_view_total_collections === 1 || emp.can_view_total_collections === true
     });
     this.isManagePermissionsOpen = true;
   }
