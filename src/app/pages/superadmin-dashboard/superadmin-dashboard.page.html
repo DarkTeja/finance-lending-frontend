@@ -2,7 +2,7 @@
   <ion-toolbar>
     <ion-title>Superadmin Control Center</ion-title>
     <ion-buttons slot="end">
-      <ion-button (click)="openChangeMyPasswordModal()" color="light" style="margin-right: 8px;" title="Change Password">
+      <ion-button (click)="openChangeMyPasswordModal()" color="primary" style="margin-right: 8px;" title="Change Password">
         <ion-icon name="key-outline" slot="icon-only"></ion-icon>
       </ion-button>
       <ion-button (click)="logout()" color="danger" title="Logout">
@@ -13,6 +13,9 @@
 </ion-header>
 
 <ion-content [fullscreen]="true" class="dashboard-bg">
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+  <div class="blob blob-3"></div>
   <div class="header-banner">
     <h2>LendFlow Operations</h2>
     <p>Logged in as: Superadmin | System-wide access</p>
@@ -21,16 +24,16 @@
     
     <!-- Superadmin Metrics -->
     <div class="metrics-grid" style="display: flex; gap: 16px; margin-bottom: 24px; padding: 0 4px;">
-      <div class="metric-card" style="flex: 1; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 16px; padding: 20px; text-align: center;">
+      <div class="metric-card" style="flex: 1; background: rgba(255, 255, 255, 0.6); border: 1px solid rgba(255, 255, 255, 0.8); border-radius: 16px; padding: 20px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
         <ion-icon name="business-outline" style="font-size: 32px; color: #3b82f6; margin-bottom: 8px;"></ion-icon>
-        <p style="color: #93c5fd; font-size: 14px; font-weight: 600; text-transform: uppercase; margin: 0 0 8px 0;">Total Organizations</p>
-        <h2 style="color: white; font-size: 36px; font-weight: 700; margin: 0;">{{ organizations.length }}</h2>
+        <p style="color: #64748b; font-size: 14px; font-weight: 700; text-transform: uppercase; margin: 0 0 8px 0; letter-spacing: 0.5px;">Total Organizations</p>
+        <h2 style="color: #1e293b; font-size: 36px; font-weight: 800; margin: 0;">{{ organizations.length }}</h2>
       </div>
 
-      <div class="metric-card" style="flex: 1; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 16px; padding: 20px; text-align: center;">
+      <div class="metric-card" style="flex: 1; background: rgba(255, 255, 255, 0.6); border: 1px solid rgba(255, 255, 255, 0.8); border-radius: 16px; padding: 20px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
         <ion-icon name="people-circle-outline" style="font-size: 32px; color: #10b981; margin-bottom: 8px;"></ion-icon>
-        <p style="color: #6ee7b7; font-size: 14px; font-weight: 600; text-transform: uppercase; margin: 0 0 8px 0;">Total Admins</p>
-        <h2 style="color: white; font-size: 36px; font-weight: 700; margin: 0;">{{ admins.length }}</h2>
+        <p style="color: #64748b; font-size: 14px; font-weight: 700; text-transform: uppercase; margin: 0 0 8px 0; letter-spacing: 0.5px;">Total Admins</p>
+        <h2 style="color: #1e293b; font-size: 36px; font-weight: 800; margin: 0;">{{ admins.length }}</h2>
       </div>
     </div>
     <!-- Section: Organizations -->
@@ -52,9 +55,14 @@
           <div class="org-icon">
             <ion-icon name="business"></ion-icon>
           </div>
-          <div class="org-info">
+          <div class="org-info" style="flex: 1;">
             <h4>{{ org.name }}</h4>
-            <p>ID: {{ org.uuid }}</p>
+            <p>Enterprise Tenant</p>
+          </div>
+          <div class="actions" style="display: flex; gap: 8px;">
+            <button class="icon-btn edit" (click)="openEditOrgModal(org)" title="Edit Organization">
+              <ion-icon name="pencil"></ion-icon>
+            </button>
           </div>
         </div>
       </div>
@@ -79,10 +87,25 @@
           <div class="avatar-circle">
             {{ adm.name.charAt(0).toUpperCase() }}
           </div>
-          <div class="details">
-            <h4>{{ adm.name }}</h4>
-            <p>User: {{ adm.username }} • Mob: {{ adm.mobile_number || 'N/A' }}</p>
+          <div class="details" style="flex: 1;">
+            <h4>{{ adm.name }} <span class="status-badge" [ngClass]="adm.status">{{ adm.status }}</span></h4>
+            <div style="display: flex; flex-direction: column; gap: 4px; margin: 8px 0;">
+              <p class="admin-subtext">
+                <ion-icon name="person-outline"></ion-icon> {{ adm.username }}
+              </p>
+              <p class="admin-subtext">
+                <ion-icon name="call-outline"></ion-icon> {{ adm.mobile_number || 'N/A' }}
+              </p>
+            </div>
             <span class="org-tag">{{ adm.organization_name || 'Unassigned Organization' }}</span>
+          </div>
+          <div class="actions" style="display: flex; flex-direction: column; gap: 8px;">
+            <button class="icon-btn edit" (click)="openEditAdminModal(adm)" title="Edit Admin">
+              <ion-icon name="pencil"></ion-icon>
+            </button>
+            <button class="icon-btn toggle-status" (click)="toggleAdminStatus(adm)" [title]="adm.status === 'active' ? 'Disable Admin' : 'Enable Admin'" [ngClass]="adm.status">
+              <ion-icon [name]="adm.status === 'active' ? 'ban-outline' : 'checkmark-circle-outline'"></ion-icon>
+            </button>
           </div>
         </div>
       </div>
@@ -102,6 +125,12 @@
       </ion-header>
 
       <ion-content class="modal-bg">
+        <div class="modal-colorful-banner">
+          <ion-icon name="business"></ion-icon>
+          <h3>Create Organization</h3>
+          <p>Register a new tenant in the LendFlow system</p>
+        </div>
+        
         <form [formGroup]="orgForm" (ngSubmit)="onCreateOrganization()" class="modal-form">
           <div class="input-group">
             <label>Organization Name *</label>
@@ -129,6 +158,12 @@
       </ion-header>
 
       <ion-content class="modal-bg">
+        <div class="modal-colorful-banner">
+          <ion-icon name="person-add"></ion-icon>
+          <h3>Create Administrator</h3>
+          <p>Register a new admin for a specific tenant</p>
+        </div>
+        
         <form [formGroup]="adminForm" (ngSubmit)="onCreateAdmin()" class="modal-form">
           <div class="input-group">
             <label>Full Name *</label>
@@ -191,6 +226,77 @@
           </div>
           <button type="submit" [disabled]="changeMyPasswordForm.invalid" class="submit-modal-btn">
             Update Password
+          </button>
+        </form>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+
+  <!-- Edit Organization Modal -->
+  <ion-modal [isOpen]="isEditOrgOpen" (didDismiss)="isEditOrgOpen = false" class="glass-modal">
+    <ng-template>
+      <ion-header class="ion-no-border">
+        <ion-toolbar>
+          <ion-title>Edit Organization</ion-title>
+          <ion-buttons slot="end">
+            <ion-button (click)="isEditOrgOpen = false">Close</ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+      <ion-content class="modal-bg">
+        <div class="modal-colorful-banner">
+          <ion-icon name="business"></ion-icon>
+          <h3>Edit Organization</h3>
+          <p>Update tenant details</p>
+        </div>
+        <form [formGroup]="editOrgForm" (ngSubmit)="onEditOrganization()" class="modal-form">
+          <div class="input-group">
+            <label>Organization Name *</label>
+            <input type="text" formControlName="name" placeholder="E.g., Reddy Microfinance Ltd" />
+          </div>
+          <button type="submit" [disabled]="editOrgForm.invalid" class="submit-modal-btn">
+            Save Changes
+          </button>
+        </form>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+
+  <!-- Edit Admin Modal -->
+  <ion-modal [isOpen]="isEditAdminOpen" (didDismiss)="isEditAdminOpen = false" class="glass-modal">
+    <ng-template>
+      <ion-header class="ion-no-border">
+        <ion-toolbar>
+          <ion-title>Edit Admin</ion-title>
+          <ion-buttons slot="end">
+            <ion-button (click)="isEditAdminOpen = false">Close</ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+      <ion-content class="modal-bg">
+        <div class="modal-colorful-banner">
+          <ion-icon name="create-outline"></ion-icon>
+          <h3>Edit Administrator</h3>
+          <p>Update admin details and assignment</p>
+        </div>
+        <form [formGroup]="editAdminForm" (ngSubmit)="onEditAdmin()" class="modal-form">
+          <div class="input-group">
+            <label>Full Name *</label>
+            <input type="text" formControlName="name" placeholder="E.g., John Doe" />
+          </div>
+          <div class="input-group">
+            <label>Mobile Number (Optional)</label>
+            <input type="text" formControlName="mobile_number" placeholder="10-digit number" />
+          </div>
+          <div class="input-group">
+            <label>Assign Organization *</label>
+            <select formControlName="organization_uuid" class="form-select">
+              <option value="" disabled selected>Select Organization...</option>
+              <option *ngFor="let org of organizations" [value]="org.uuid">{{ org.name }}</option>
+            </select>
+          </div>
+          <button type="submit" [disabled]="editAdminForm.invalid" class="submit-modal-btn">
+            Save Changes
           </button>
         </form>
       </ion-content>

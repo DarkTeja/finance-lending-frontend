@@ -5,6 +5,7 @@ import { IonicModule, ToastController, LoadingController, MenuController } from 
 import { RouterModule } from '@angular/router';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { Geolocation } from '@capacitor/geolocation';
 import { ApiService } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
 import { DbService } from '../../services/db.service';
@@ -47,6 +48,7 @@ export class EmployeeDashboardPage implements OnInit {
   loanSearchQuery = '';
   filteredLoansForCollection: any[] = [];
   selectedLoanForCollection: any = null;
+  selectedEditCollection: any = null;
   selectedLoanBalance: number = 0;
 
   // Loan Details Modal variables
@@ -231,19 +233,24 @@ export class EmployeeDashboardPage implements OnInit {
         this.collections = res;
         const syncedCols = res.map((c: any) => ({ ...c, sync_status: 'Synced' }));
         await this.dbService.setCollections(syncedCols);
+        this.loadDashboardStats();
       },
       error: async (err) => {
         console.error('Error loading collections, falling back to local DB:', err);
         this.collections = await this.dbService.getCollections();
+        this.loadDashboardStats();
       }
     });
-
-    this.loadDashboardStats();
   }
 
   loadDashboardStats() {
     this.apiService.getDashboardStats().subscribe({
-      next: (res) => this.dashboardStats = res,
+      next: (res) => {
+        // Only update if we received valid numbers, otherwise keep existing to prevent offline reset
+        if (res && res.today_collection !== undefined) {
+          this.dashboardStats = res;
+        }
+      },
       error: (err) => console.error('Error loading dashboard stats:', err)
     });
   }
@@ -373,18 +380,27 @@ export class EmployeeDashboardPage implements OnInit {
   }
 
   async onCreateLoan() {
-    const rawForm = this.loanForm.getRawValue();
-
     if (this.loanForm.invalid) {
       this.showToast('Please verify all required fields are filled', 'warning');
       return;
     }
 
+    const rawForm: any = this.loanForm.getRawValue();
+
     const loader = await this.loadingCtrl.create({
-      message: 'Processing loan disbursement...',
+      message: 'Getting location & processing loan...',
       spinner: 'crescent'
     });
     await loader.present();
+
+    try {
+      const position = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 5000 });
+      rawForm.latitude = position.coords.latitude;
+      rawForm.longitude = position.coords.longitude;
+    } catch (e) {
+      console.warn('Could not get location', e);
+      this.showToast('Could not record GPS location. Loan will be saved without it.', 'warning');
+    }
 
     this.apiService.createLoan(rawForm).subscribe({
       next: async () => {
@@ -445,7 +461,7 @@ export class EmployeeDashboardPage implements OnInit {
       return;
     }
 
-    const payload = {
+    const payload: any = {
       ...this.collectionForm.value,
       uuid: this.generateUUID(),
       organization_uuid: this.currentUser?.organization_uuid,
@@ -454,10 +470,19 @@ export class EmployeeDashboardPage implements OnInit {
     };
 
     const loader = await this.loadingCtrl.create({
-      message: 'Recording payment...',
+      message: 'Getting location & recording payment...',
       spinner: 'crescent'
     });
     await loader.present();
+
+    try {
+      const position = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 5000 });
+      payload.latitude = position.coords.latitude;
+      payload.longitude = position.coords.longitude;
+    } catch (e) {
+      console.warn('Could not get location', e);
+      this.showToast('Could not record GPS location. Payment will be saved without it.', 'warning');
+    }
 
     const actuallyOnline = await this.syncService.checkActualConnection();
 
@@ -504,6 +529,7 @@ export class EmployeeDashboardPage implements OnInit {
     
     // Refresh local lists
     this.collections = await this.dbService.getCollections();
+    this.loadDashboardStats();
   }
 
   generateUUID(): string {
@@ -523,25 +549,28 @@ export class EmployeeDashboardPage implements OnInit {
     return filtered.sort((a, b) => new Date(b.collection_date).getTime() - new Date(a.collection_date).getTime());
   }
 
-  getEmployeeCollectionSummary(): { name: string, count: number, total: number }[] {
+  getEmployeeCollectionSummary(): { name: string, count: number, total: number, cashTotal: number, onlineTotal: number }[] {
     const data = this.getAllCollectionsSorted();
-    const summaryMap = new Map<string, { count: number, total: number }>();
+    const summaryMap = new Map<string, { count: number, total: number, cashTotal: number, onlineTotal: number }>();
 
     data.forEach(col => {
       const empName = col.collected_by_name || 'Admin';
       const amt = parseFloat(col.collected_amount) || 0;
+      const type = col.payment_type || 'Cash';
       
       if (!summaryMap.has(empName)) {
-        summaryMap.set(empName, { count: 0, total: 0 });
+        summaryMap.set(empName, { count: 0, total: 0, cashTotal: 0, onlineTotal: 0 });
       }
       
       const stat = summaryMap.get(empName)!;
       stat.count += 1;
       stat.total += amt;
+      if (type === 'Cash') stat.cashTotal += amt;
+      if (type === 'Online') stat.onlineTotal += amt;
     });
 
     const result = Array.from(summaryMap.entries()).map(([name, stats]) => {
-      return { name, count: stats.count, total: stats.total };
+      return { name, count: stats.count, total: stats.total, cashTotal: stats.cashTotal, onlineTotal: stats.onlineTotal };
     });
 
     return result.sort((a, b) => b.total - a.total);

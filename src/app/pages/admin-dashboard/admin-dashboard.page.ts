@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { IonicModule, ToastController, LoadingController, AlertController, MenuController } from '@ionic/angular';
 import { RouterModule } from '@angular/router';
+import { Geolocation } from '@capacitor/geolocation';
 import { ApiService } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
 import { DbService } from '../../services/db.service';
@@ -26,6 +27,7 @@ export class AdminDashboardPage implements OnInit {
   
   activeTab: 'dashboard' | 'users' | 'customers' | 'loans' | 'collection' | 'total-collections' | 'reports' | 'investments' | 'expenses' | 'cashbook' = 'dashboard';
 
+  isProfileMenuOpen = false;
   investments: any[] = [];
   allExpenses: any[] = [];
   investmentForm!: FormGroup;
@@ -47,31 +49,38 @@ export class AdminDashboardPage implements OnInit {
 
   isEditingLayout = false;
   metricsConfig = [
-    { id: 'today', title: 'Today Collection', color: '#10b981', key: 'today_collection' },
-    { id: 'bfc', title: 'BF Cash', color: '#f59e0b', key: 'bf_cash' },
-    { id: 'rec', title: 'Receivable Amount', color: '#ef4444', key: 'receivable_amount' },
-    { id: 'pen', title: 'Penalty Amount', color: '#8b5cf6', key: 'extra_amount' },
-    { id: 'int', title: 'Interests', color: '#3b82f6', key: 'interests' },
-    { id: 'inv', title: 'Total Investments', color: '#ec4899', key: 'total_investments' },
-    { id: 'exp', title: 'Total Expenses', color: '#e74c3c', key: 'total_expenses' },
-    { id: 'cus', title: 'Customer Count', color: '#0ea5e9', key: 'customer_count' },
-    { id: 'emp', title: 'Employee Count', color: '#8b5cf6', key: 'employee_count' }
+    { id: 'today', title: 'Today\'s Collection', color: '#10b981', key: 'today_collection', size: 'half' },
+    { id: 'bfc', title: 'Cash In Hand', color: '#f59e0b', key: 'bf_cash', size: 'half' },
+    { id: 'rec', title: 'Pending Amount', color: '#ef4444', key: 'receivable_amount', size: 'half' },
+    { id: 'pen', title: 'Penalties', color: '#8b5cf6', key: 'extra_amount', size: 'half' },
+    { id: 'int', title: 'Interest Earned', color: '#3b82f6', key: 'interests', size: 'half' },
+    { id: 'inv', title: 'Total Invested', color: '#ec4899', key: 'total_investments', size: 'half' },
+    { id: 'exp', title: 'Total Expenses', color: '#e74c3c', key: 'total_expenses', size: 'half' }
   ];
   
   expenseForm!: FormGroup;
   editExpenseForm!: FormGroup;
   isAddExpenseOpen = false;
+  isAddInvestmentOpen = false;
   isEditExpenseOpen = false;
   selectedExpenseForEdit: any = null;
-  expenseFilterDate: string = '';
+  getLocalISODate(): string {
+    const tzOffset = (new Date()).getTimezoneOffset() * 60000;
+    return new Date(Date.now() - tzOffset).toISOString().split('T')[0];
+  }
+
+  expenseFilterDate: string = this.getLocalISODate();
 
   // Cashbook / Ledger variables
-  cashbookDate: string = new Date().toISOString().split('T')[0];
-  todayIsoDate: string = new Date().toISOString().split('T')[0];
+  cashbookDate: string = this.getLocalISODate();
+  todayIsoDate: string = this.getLocalISODate();
   cashbookData: any = null;
   cashbookClosingBalance: number = 0;
 
   employeeForm!: FormGroup;
+  editEmployeeForm!: FormGroup;
+  isEditEmployeeOpen = false;
+  selectedEditEmployee: any = null;
   permissionForm!: FormGroup;
   loanForm!: FormGroup;
   editCustomerForm!: FormGroup;
@@ -154,6 +163,20 @@ export class AdminDashboardPage implements OnInit {
         console.error('Error loading dashboard layout', e);
       }
     }
+
+    const savedSizesStr = localStorage.getItem('adminDashboardMetricsSizes');
+    if (savedSizesStr) {
+      try {
+        const savedSizes = JSON.parse(savedSizesStr);
+        this.metricsConfig.forEach(metric => {
+          if (savedSizes[metric.id]) {
+            metric.size = savedSizes[metric.id];
+          }
+        });
+      } catch (e) {
+        console.error('Error loading dashboard sizes', e);
+      }
+    }
   }
 
   ionViewWillEnter() {
@@ -173,6 +196,22 @@ export class AdminDashboardPage implements OnInit {
     this.isEditingLayout = !this.isEditingLayout;
   }
 
+  toggleMetricSize(metricId: string) {
+    const metric = this.metricsConfig.find(m => m.id === metricId);
+    if (metric) {
+      metric.size = metric.size === 'full' ? 'half' : 'full';
+      
+      // Save sizes
+      const sizes: any = {};
+      this.metricsConfig.forEach(m => {
+        sizes[m.id] = m.size;
+      });
+      localStorage.setItem('adminDashboardMetricsSizes', JSON.stringify(sizes));
+    }
+  }
+
+
+
   dropMetric(event: CdkDragDrop<any[]>) {
     moveItemInArray(this.metricsConfig, event.previousIndex, event.currentIndex);
     const order = this.metricsConfig.map(m => m.id);
@@ -185,14 +224,18 @@ export class AdminDashboardPage implements OnInit {
 
   initForms() {
     this.employeeForm = this.fb.group({
-      username: ['', [Validators.required, Validators.minLength(3)]],
+      name: ['', Validators.required],
+      username: ['', Validators.required],
       password: ['', [Validators.required, Validators.minLength(6)]],
-      name: ['', [Validators.required, Validators.minLength(3)]],
-      mobile_number: ['', [Validators.pattern('^[0-9]{10}$')]],
+      mobile_number: [''],
       can_disburse_loans: [true],
       can_collect_payments: [true],
       can_view_reports: [false],
       can_view_total_collections: [false]
+    });
+    this.editEmployeeForm = this.fb.group({
+      name: ['', Validators.required],
+      mobile_number: ['']
     });
 
     this.permissionForm = this.fb.group({
@@ -540,39 +583,23 @@ export class AdminDashboardPage implements OnInit {
   }
 
   // --- Customer Manage Actions (Edit & Delete) ---
-  async manageCustomer(customer: any) {
-    const alert = await this.alertCtrl.create({
-      header: `Manage: ${customer.name}`,
-      message: 'Choose an option to modify this customer:',
-      buttons: [
-        {
-          text: 'Edit Details',
-          handler: () => {
-            this.selectedCustomerForManage = customer;
-            this.editCustomerForm.patchValue({
-              name: customer.name,
-              mobile_number: customer.mobile_number,
-              place: customer.place,
-              father_name: customer.father_name || '',
-              aadhaar_number: customer.aadhaar_number || '',
-              pan_number: customer.pan_number || '',
-              address: customer.address || '',
-              occupation: customer.occupation || '',
-              guarantor_name: customer.guarantor_name || '',
-              guarantor_mobile: customer.guarantor_mobile || '',
-              collection_days: customer.collection_days || 'Daily',
-              notes: customer.notes || ''
-            });
-            this.isEditCustomerOpen = true;
-          }
-        },
-        {
-          text: 'Cancel',
-          role: 'cancel'
-        }
-      ]
+  manageCustomer(customer: any) {
+    this.selectedCustomerForManage = customer;
+    this.editCustomerForm.patchValue({
+      name: customer.name,
+      mobile_number: customer.mobile_number,
+      place: customer.place,
+      father_name: customer.father_name || '',
+      aadhaar_number: customer.aadhaar_number || '',
+      pan_number: customer.pan_number || '',
+      address: customer.address || '',
+      occupation: customer.occupation || '',
+      guarantor_name: customer.guarantor_name || '',
+      guarantor_mobile: customer.guarantor_mobile || '',
+      collection_days: customer.collection_days || 'Daily',
+      notes: customer.notes || ''
     });
-    await alert.present();
+    this.isEditCustomerOpen = true;
   }
 
   async onUpdateCustomer() {
@@ -628,33 +655,17 @@ export class AdminDashboardPage implements OnInit {
   }
 
 
-  async manageLoan(loan: any) {
-    const alert = await this.alertCtrl.create({
-      header: `Manage Loan: ${loan.accno}`,
-      message: `Selected Customer: ${loan.customer_name}`,
-      buttons: [
-        {
-          text: 'Edit Details / Status',
-          handler: () => {
-            this.selectedLoanForManage = loan;
-            this.editLoanForm.patchValue({
-              accno: loan.accno,
-              loan_amount: loan.loan_amount,
-              interest_rate: loan.interest_rate,
-              interest_amount: loan.interest_amount,
-              total_repayable: loan.total_repayable,
-              status: loan.status
-            });
-            this.isEditLoanOpen = true;
-          }
-        },
-        {
-          text: 'Cancel',
-          role: 'cancel'
-        }
-      ]
+  manageLoan(loan: any) {
+    this.selectedLoanForManage = loan;
+    this.editLoanForm.patchValue({
+      accno: loan.accno,
+      loan_amount: loan.loan_amount,
+      interest_rate: loan.interest_rate,
+      interest_amount: loan.interest_amount,
+      total_repayable: loan.total_repayable,
+      status: loan.status
     });
-    await alert.present();
+    this.isEditLoanOpen = true;
   }
 
   async onUpdateLoan() {
@@ -718,6 +729,7 @@ export class AdminDashboardPage implements OnInit {
 
   directoryCustomerSearchQuery = '';
   directoryLoanSearchQuery = '';
+  directoryEmployeeSearchQuery = '';
 
   getActiveLoansCountForCustomer(customerUuid: string): number {
     return this.loans.filter(l => l.customer_uuid === customerUuid && l.status === 'active').length;
@@ -734,6 +746,14 @@ export class AdminDashboardPage implements OnInit {
     const q = this.directoryCustomerSearchQuery.toLowerCase();
     return this.customers.filter(c => 
       c.name.toLowerCase().includes(q) || c.place.toLowerCase().includes(q)
+    );
+  }
+
+  getFilteredEmployees(): any[] {
+    if (!this.directoryEmployeeSearchQuery) return this.employees;
+    const q = this.directoryEmployeeSearchQuery.toLowerCase();
+    return this.employees.filter(e => 
+      e.name.toLowerCase().includes(q) || e.username.toLowerCase().includes(q)
     );
   }
 
@@ -763,7 +783,7 @@ export class AdminDashboardPage implements OnInit {
     });
   }
 
-  collectionFilterDate: string = new Date().toISOString().split('T')[0];
+  collectionFilterDate: string = this.getLocalISODate();
 
   getAllCollectionsSorted(): any[] {
     let filtered = [...this.collections];
@@ -800,25 +820,31 @@ export class AdminDashboardPage implements OnInit {
     return list.sort((a, b) => new Date(b.expense_date).getTime() - new Date(a.expense_date).getTime());
   }
 
-  getEmployeeCollectionSummary(): { name: string, count: number, total: number }[] {
+  getEmployeeCollectionSummary(): { name: string, count: number, total: number, cashTotal: number, onlineTotal: number }[] {
     const data = this.getAllCollectionsSorted();
-    const summaryMap = new Map<string, { count: number, total: number }>();
+    const summaryMap = new Map<string, { count: number, total: number, cashTotal: number, onlineTotal: number }>();
 
     data.forEach(col => {
       const empName = col.collected_by_name || 'Admin';
       const amt = parseFloat(col.collected_amount) || 0;
+      const type = col.payment_type || 'Cash';
       
       if (!summaryMap.has(empName)) {
-        summaryMap.set(empName, { count: 0, total: 0 });
+        summaryMap.set(empName, { count: 0, total: 0, cashTotal: 0, onlineTotal: 0 });
       }
       
       const stat = summaryMap.get(empName)!;
       stat.count += 1;
       stat.total += amt;
+      if (type.toLowerCase() === 'online') {
+        stat.onlineTotal += amt;
+      } else {
+        stat.cashTotal += amt;
+      }
     });
 
     const result = Array.from(summaryMap.entries()).map(([name, stats]) => {
-      return { name, count: stats.count, total: stats.total };
+      return { name, count: stats.count, total: stats.total, cashTotal: stats.cashTotal, onlineTotal: stats.onlineTotal };
     });
 
     return result.sort((a, b) => b.total - a.total);
@@ -932,7 +958,7 @@ export class AdminDashboardPage implements OnInit {
   }
 
   async onCreateLoan() {
-    const rawForm = this.loanForm.getRawValue();
+    const rawForm: any = this.loanForm.getRawValue();
 
     if (this.loanForm.invalid) {
       this.showToast('Please verify all required fields are filled', 'warning');
@@ -940,10 +966,19 @@ export class AdminDashboardPage implements OnInit {
     }
 
     const loader = await this.loadingCtrl.create({
-      message: 'Processing loan disbursement...',
+      message: 'Getting location & processing loan...',
       spinner: 'crescent'
     });
     await loader.present();
+
+    try {
+      const position = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 5000 });
+      rawForm.latitude = position.coords.latitude;
+      rawForm.longitude = position.coords.longitude;
+    } catch (e) {
+      console.warn('Could not get location', e);
+      this.showToast('Could not record GPS location. Loan will be saved without it.', 'warning');
+    }
 
     this.apiService.createLoan(rawForm).subscribe({
       next: async () => {
@@ -1024,6 +1059,34 @@ export class AdminDashboardPage implements OnInit {
     });
   }
 
+  openEditEmployeeModal(emp: any) {
+    this.selectedEditEmployee = emp;
+    this.editEmployeeForm.patchValue({
+      name: emp.name,
+      mobile_number: emp.mobile_number
+    });
+    this.isEditEmployeeOpen = true;
+  }
+
+  async onEditEmployee() {
+    if (this.editEmployeeForm.invalid || !this.selectedEditEmployee) return;
+    const loading = await this.loadingCtrl.create({ message: 'Updating...' });
+    await loading.present();
+
+    this.apiService.updateEmployee(this.selectedEditEmployee.uuid, this.editEmployeeForm.value).subscribe({
+      next: () => {
+        loading.dismiss();
+        this.showToast('Employee updated successfully', 'success');
+        this.isEditEmployeeOpen = false;
+        this.loadData();
+      },
+      error: (err) => {
+        loading.dismiss();
+        this.showToast('Failed to update employee', 'danger');
+      }
+    });
+  }
+
   async toggleStatus(employee: any) {
     const newStatus = employee.status === 'active' ? 'disabled' : 'active';
     const alert = await this.alertCtrl.create({
@@ -1094,7 +1157,7 @@ export class AdminDashboardPage implements OnInit {
       return;
     }
 
-    const payload = {
+    const payload: any = {
       ...this.collectionForm.value,
       uuid: this.generateUUID(),
       organization_uuid: this.currentUser?.organization_uuid,
@@ -1103,10 +1166,19 @@ export class AdminDashboardPage implements OnInit {
     };
 
     const loader = await this.loadingCtrl.create({
-      message: 'Recording payment...',
+      message: 'Getting location & recording payment...',
       spinner: 'crescent'
     });
     await loader.present();
+
+    try {
+      const position = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 5000 });
+      payload.latitude = position.coords.latitude;
+      payload.longitude = position.coords.longitude;
+    } catch (e) {
+      console.warn('Could not get location', e);
+      this.showToast('Could not record GPS location. Payment will be saved without it.', 'warning');
+    }
 
     const actuallyOnline = await this.syncService.checkActualConnection();
 
@@ -1157,15 +1229,17 @@ export class AdminDashboardPage implements OnInit {
   // --- Edit Collection Features ---
   openEditCollectionModal(col: any) {
     this.selectedEditCollection = col;
-    // Format date for date-local input if needed, or just standard Date
+    // Format date for datetime-local input in local timezone
     const d = new Date(col.collection_date);
-    const dateFormatted = d.toISOString();
+    const tzOffset = d.getTimezoneOffset() * 60000;
+    const localISOTime = (new Date(d.getTime() - tzOffset)).toISOString().slice(0, 16);
 
     this.editCollectionForm.patchValue({
       collected_amount: col.collected_amount,
-      collection_date: dateFormatted,
+      collection_date: localISOTime,
       payment_type: col.payment_type || 'Cash'
     });
+    
     this.isEditCollectionOpen = true;
   }
 
@@ -1258,6 +1332,7 @@ export class AdminDashboardPage implements OnInit {
     this.apiService.addInvestment(this.investmentForm.value).subscribe({
       next: async () => {
         loader.dismiss();
+        this.isAddInvestmentOpen = false;
         this.investmentForm.reset();
         this.showToast('Investment recorded successfully', 'success');
         this.apiService.getInvestments().subscribe({

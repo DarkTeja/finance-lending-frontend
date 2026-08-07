@@ -53,6 +53,10 @@ export class ApiService {
     return this.http.put(`${this.baseUrl}/users/employees/${uuid}/permissions`, permissions, { headers: this.getHeaders() });
   }
 
+  updateEmployee(uuid: string, data: any): Observable<any> {
+    return this.http.put(`${this.baseUrl}/users/employees/${uuid}`, data, { headers: this.getHeaders() });
+  }
+
   // --- Customers ---
   getCustomers(): Observable<any> {
     return this.http.get(`${this.baseUrl}/customers`, { headers: this.getHeaders() });
@@ -79,6 +83,10 @@ export class ApiService {
     return this.http.post(`${this.baseUrl}/organizations`, data, { headers: this.getHeaders() });
   }
 
+  updateOrganization(uuid: string, data: any): Observable<any> {
+    return this.http.put(`${this.baseUrl}/organizations/${uuid}`, data, { headers: this.getHeaders() });
+  }
+
   // --- Superadmin: Admins ---
   getAdmins(): Observable<any> {
     return this.http.get(`${this.baseUrl}/users/admins`, { headers: this.getHeaders() });
@@ -86,6 +94,14 @@ export class ApiService {
 
   createAdmin(data: any): Observable<any> {
     return this.http.post(`${this.baseUrl}/users/admins`, data, { headers: this.getHeaders() });
+  }
+
+  updateAdmin(uuid: string, data: any): Observable<any> {
+    return this.http.put(`${this.baseUrl}/users/admins/${uuid}`, data, { headers: this.getHeaders() });
+  }
+
+  toggleAdminStatus(uuid: string, status: string): Observable<any> {
+    return this.http.patch(`${this.baseUrl}/users/admins/${uuid}/status`, { status }, { headers: this.getHeaders() });
   }
 
   // --- Loans ---

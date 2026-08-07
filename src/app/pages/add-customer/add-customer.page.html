@@ -1,15 +1,17 @@
 <ion-header class="ion-no-border glass-header">
   <ion-toolbar>
-    <ion-buttons slot="start">
-      <ion-button (click)="goBack()" color="light">
-        <ion-icon name="arrow-back-outline" slot="icon-only"></ion-icon>
-      </ion-button>
-    </ion-buttons>
     <ion-title>Register Customer</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="goBack()">Close</ion-button>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
 <ion-content [fullscreen]="true" class="add-cust-bg">
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+  <div class="blob blob-3"></div>
+
   <div class="form-banner">
     <h2>Add New Customer</h2>
     <p>Fill out the profile. Only Name, Mobile, and Place are required.</p>

@@ -1,7 +1,50 @@
 .login-bg {
-  --background: radial-gradient(circle at center, #1b1c30 0%, #020617 100%);
+  --background: #f0f4f8; /* Soft light background base */
   font-family: 'Inter', sans-serif;
-  --overflow: hidden;
+  position: relative;
+}
+
+/* Beautiful Animated Blobs for Glass Depth */
+.blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  z-index: 1;
+  opacity: 0.7;
+  animation: float 20s infinite alternate ease-in-out;
+}
+
+.blob-1 {
+  width: 400px;
+  height: 400px;
+  background: #ff6b6b; /* Vibrant red/pink */
+  top: -10%;
+  left: -10%;
+}
+
+.blob-2 {
+  width: 500px;
+  height: 500px;
+  background: #4facfe; /* Vibrant blue */
+  bottom: -20%;
+  right: -10%;
+  animation-delay: -5s;
+}
+
+.blob-3 {
+  width: 300px;
+  height: 300px;
+  background: #fbc2eb; /* Soft purple/pink */
+  bottom: 20%;
+  left: 10%;
+  animation-delay: -10s;
+}
+
+@keyframes float {
+  0% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -50px) scale(1.1); }
+  66% { transform: translate(-20px, 20px) scale(0.9); }
+  100% { transform: translate(0, 0) scale(1); }
 }
 
 .login-container {
@@ -15,152 +58,178 @@
 }
 
 .glass-panel {
-  background: rgba(255, 255, 255, 0.02);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 24px;
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.8);
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 30px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.08);
 }
 
 .login-card {
   width: 100%;
-  max-width: 400px;
-  padding: 40px 30px;
+  max-width: 420px;
+  padding: 50px 40px;
   text-align: center;
   position: relative;
   overflow: hidden;
 
+  /* Subtle inner glow for premium feel */
   &::before {
     content: '';
     position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: radial-gradient(circle, rgba(67, 97, 238, 0.1) 0%, transparent 60%);
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 100%);
     pointer-events: none;
+    border-radius: 30px;
   }
 }
 
 .logo-section {
-  margin-bottom: 35px;
+  margin-bottom: 40px;
+  position: relative;
+  z-index: 2;
 
   .glow-logo {
-    width: 60px;
-    height: 60px;
-    background: linear-gradient(135deg, #6366f1, #10b981);
-    border-radius: 18px;
+    width: 70px;
+    height: 70px;
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    border-radius: 20px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 28px;
-    color: #f8fafc;
-    box-shadow: 0 8px 24px rgba(67, 97, 238, 0.35);
-    margin-bottom: 16px;
+    font-size: 34px;
+    color: #ffffff;
+    box-shadow: 0 10px 25px rgba(79, 172, 254, 0.4);
+    margin-bottom: 20px;
   }
 
   h1 {
-    font-size: 26px;
+    font-size: 30px;
     font-weight: 800;
-    color: #f8fafc;
+    color: #1e293b;
     margin: 0;
     letter-spacing: -0.5px;
   }
 
   p {
-    font-size: 13px;
-    color: #94a3b8;
-    margin: 6px 0 0 0;
+    font-size: 14px;
+    color: #64748b;
+    margin: 8px 0 0 0;
+    font-weight: 500;
   }
 }
 
 .login-form {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 24px;
   text-align: left;
+  position: relative;
+  z-index: 2;
 }
 
 .input-group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 
   label {
-    font-size: 11px;
-    font-weight: 600;
-    color: #94a3b8;
+    font-size: 12px;
+    font-weight: 700;
+    color: #475569;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    padding-left: 4px;
+    padding-left: 6px;
   }
 }
 
 .input-wrapper {
   display: flex;
   align-items: center;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 14px;
-  height: 50px;
-  padding: 0 16px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 16px;
+  height: 56px;
+  padding: 0 18px;
   transition: all 0.3s ease;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
 
   ion-icon {
-    font-size: 20px;
-    color: #64748b;
-    margin-right: 12px;
+    font-size: 22px;
+    color: #94a3b8;
+    margin-right: 14px;
+    transition: color 0.3s ease;
   }
 
   input {
     background: transparent;
     border: none;
     outline: none;
-    color: #f8fafc;
-    font-size: 14px;
+    color: #1e293b;
+    font-size: 15px;
+    font-weight: 500;
     flex: 1;
 
     &::placeholder {
-      color: #64748b;
+      color: #94a3b8;
+      font-weight: 400;
     }
   }
 
   &:focus-within {
-    border-color: #6366f1;
-    background: rgba(255, 255, 255, 0.05);
-    box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.15);
+    border-color: #4facfe;
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 0 0 4px rgba(79, 172, 254, 0.15), inset 0 2px 4px rgba(0, 0, 0, 0.02);
 
     ion-icon {
-      color: #6366f1;
+      color: #4facfe;
     }
   }
 }
 
 .login-btn {
-  background: linear-gradient(90deg, #6366f1, #10b981);
-  color: #f8fafc;
-  font-size: 15px;
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  color: #ffffff;
+  font-size: 16px;
   font-weight: 700;
   border: none;
-  border-radius: 14px;
-  height: 50px;
+  border-radius: 16px;
+  height: 56px;
   cursor: pointer;
-  box-shadow: 0 8px 24px rgba(67, 97, 238, 0.25);
-  margin-top: 10px;
-  transition: all 0.3s ease;
+  box-shadow: 0 10px 25px rgba(79, 172, 254, 0.3);
+  margin-top: 12px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 100%);
+  }
 
   &:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 12px 28px rgba(67, 97, 238, 0.4);
+    transform: translateY(-2px);
+    box-shadow: 0 14px 30px rgba(79, 172, 254, 0.4);
+  }
+
+  &:active {
+    transform: translateY(0);
   }
 
   &:disabled {
-    background: rgba(255, 255, 255, 0.03);
-    color: #64748b;
-    border: 1px solid rgba(255, 255, 255, 0.03);
+    background: rgba(255, 255, 255, 0.4);
+    color: #94a3b8;
+    border: 1px solid rgba(255, 255, 255, 0.5);
     cursor: not-allowed;
     transform: none;
     box-shadow: none;
+    
+    &::after { display: none; }
   }
 }

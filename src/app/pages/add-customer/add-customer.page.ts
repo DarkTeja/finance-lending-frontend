@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { IonicModule, ToastController, LoadingController } from '@ionic/angular';
+import { IonicModule, ToastController, LoadingController, NavController } from '@ionic/angular';
 import { Router } from '@angular/router';
 import { DbService } from '../../services/db.service';
 import { ApiService } from '../../services/api.service';
@@ -28,7 +28,8 @@ export class AddCustomerPage implements OnInit {
     private authService: AuthService,
     private router: Router,
     private toastCtrl: ToastController,
-    private loadingCtrl: LoadingController
+    private loadingCtrl: LoadingController,
+    private navCtrl: NavController
   ) {}
 
   ngOnInit() {
@@ -124,9 +125,9 @@ export class AddCustomerPage implements OnInit {
 
   goBack() {
     if (this.currentUser?.role === 'admin') {
-      this.router.navigate(['/admin-dashboard']);
+      this.navCtrl.navigateBack(['/admin-dashboard']);
     } else {
-      this.router.navigate(['/employee-dashboard']);
+      this.navCtrl.navigateBack(['/employee-dashboard']);
     }
   }
 

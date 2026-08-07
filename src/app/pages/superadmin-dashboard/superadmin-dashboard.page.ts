@@ -18,11 +18,18 @@ export class SuperadminDashboardPage implements OnInit {
 
   orgForm!: FormGroup;
   adminForm!: FormGroup;
+  editOrgForm!: FormGroup;
+  editAdminForm!: FormGroup;
   changeMyPasswordForm!: FormGroup;
 
   isAddOrgOpen = false;
   isAddAdminOpen = false;
+  isEditOrgOpen = false;
+  isEditAdminOpen = false;
   isChangeMyPasswordOpen = false;
+
+  selectedEditOrg: any = null;
+  selectedEditAdmin: any = null;
 
   constructor(
     private fb: FormBuilder,
@@ -45,6 +52,16 @@ export class SuperadminDashboardPage implements OnInit {
     this.adminForm = this.fb.group({
       username: ['', [Validators.required, Validators.minLength(3)]],
       password: ['', [Validators.required, Validators.minLength(6)]],
+      name: ['', [Validators.required, Validators.minLength(3)]],
+      mobile_number: ['', [Validators.pattern('^[0-9]{10}$')]],
+      organization_uuid: ['', [Validators.required]]
+    });
+
+    this.editOrgForm = this.fb.group({
+      name: ['', [Validators.required, Validators.minLength(3)]]
+    });
+
+    this.editAdminForm = this.fb.group({
       name: ['', [Validators.required, Validators.minLength(3)]],
       mobile_number: ['', [Validators.pattern('^[0-9]{10}$')]],
       organization_uuid: ['', [Validators.required]]
@@ -123,6 +140,85 @@ export class SuperadminDashboardPage implements OnInit {
   closeChangeMyPasswordModal() {
     this.isChangeMyPasswordOpen = false;
     this.changeMyPasswordForm.reset();
+  }
+
+  // --- EDIT ORGANIZATION ---
+  openEditOrgModal(org: any) {
+    this.selectedEditOrg = org;
+    this.editOrgForm.patchValue({ name: org.name });
+    this.isEditOrgOpen = true;
+  }
+
+  async onEditOrganization() {
+    if (this.editOrgForm.invalid || !this.selectedEditOrg) return;
+
+    const loader = await this.loadingCtrl.create({ message: 'Updating organization...' });
+    await loader.present();
+
+    this.apiService.updateOrganization(this.selectedEditOrg.uuid, this.editOrgForm.value).subscribe({
+      next: async () => {
+        loader.dismiss();
+        this.isEditOrgOpen = false;
+        this.loadData();
+        this.showToast('Organization updated successfully', 'success');
+      },
+      error: async (err) => {
+        loader.dismiss();
+        this.showToast(err?.error?.error || 'Failed to update organization', 'danger');
+      }
+    });
+  }
+
+  // --- EDIT ADMIN ---
+  openEditAdminModal(admin: any) {
+    this.selectedEditAdmin = admin;
+    this.editAdminForm.patchValue({
+      name: admin.name,
+      mobile_number: admin.mobile_number,
+      organization_uuid: admin.organization_uuid || ''
+    });
+    this.isEditAdminOpen = true;
+  }
+
+  async onEditAdmin() {
+    if (this.editAdminForm.invalid || !this.selectedEditAdmin) return;
+
+    const loader = await this.loadingCtrl.create({ message: 'Updating admin...' });
+    await loader.present();
+
+    this.apiService.updateAdmin(this.selectedEditAdmin.uuid, this.editAdminForm.value).subscribe({
+      next: async () => {
+        loader.dismiss();
+        this.isEditAdminOpen = false;
+        this.loadData();
+        this.showToast('Admin updated successfully', 'success');
+      },
+      error: async (err) => {
+        loader.dismiss();
+        this.showToast(err?.error?.error || 'Failed to update admin', 'danger');
+      }
+    });
+  }
+
+  // --- TOGGLE ADMIN STATUS ---
+  async toggleAdminStatus(admin: any) {
+    const newStatus = admin.status === 'active' ? 'disabled' : 'active';
+    const actionText = newStatus === 'active' ? 'Enabling' : 'Disabling';
+    
+    const loader = await this.loadingCtrl.create({ message: `${actionText} admin...` });
+    await loader.present();
+
+    this.apiService.toggleAdminStatus(admin.uuid, newStatus).subscribe({
+      next: async () => {
+        loader.dismiss();
+        this.loadData();
+        this.showToast(`Admin ${newStatus} successfully`, 'success');
+      },
+      error: async (err) => {
+        loader.dismiss();
+        this.showToast(err?.error?.error || `Failed to change status`, 'danger');
+      }
+    });
   }
 
   async onChangeMyPassword() {
