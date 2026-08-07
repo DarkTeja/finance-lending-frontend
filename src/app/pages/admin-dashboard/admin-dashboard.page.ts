@@ -76,13 +76,20 @@ export class AdminDashboardPage implements OnInit {
   loanForm!: FormGroup;
   editCustomerForm!: FormGroup;
   editLoanForm!: FormGroup;
-
+  // Modals state
   isAddEmployeeOpen = false;
   isManagePermissionsOpen = false;
-  isAddLoanOpen = false;
+  isAddCustomerOpen = false;
   isEditCustomerOpen = false;
+  isAddLoanOpen = false;
   isEditLoanOpen = false;
   isAccountsGridOpen = false;
+  isChangeMyPasswordOpen = false;
+  isResetEmployeePasswordOpen = false;
+
+  changeMyPasswordForm!: FormGroup;
+  resetEmployeePasswordForm!: FormGroup;
+  selectedEmployeeForReset: any = null;
   highlightedLoanUuid: string | null = null;
 
   selectedEmployeeForPermissions: any = null;
@@ -258,6 +265,15 @@ export class AdminDashboardPage implements OnInit {
     this.editInvestmentForm = this.fb.group({
       amount: ['', [Validators.required, Validators.min(1)]],
       source: ['', Validators.required]
+    });
+
+    this.changeMyPasswordForm = this.fb.group({
+      current_password: ['', [Validators.required]],
+      new_password: ['', [Validators.required, Validators.minLength(6)]]
+    });
+
+    this.resetEmployeePasswordForm = this.fb.group({
+      newPassword: ['', [Validators.required, Validators.minLength(6)]]
     });
   }
 
@@ -1355,6 +1371,62 @@ export class AdminDashboardPage implements OnInit {
       error: async (err) => {
         loader.dismiss();
         this.showToast(err?.error?.error || 'Failed to update investment', 'danger');
+      }
+    });
+  }
+
+  openChangeMyPasswordModal() {
+    this.isChangeMyPasswordOpen = true;
+  }
+
+  closeChangeMyPasswordModal() {
+    this.isChangeMyPasswordOpen = false;
+    this.changeMyPasswordForm.reset();
+  }
+
+  async onChangeMyPassword() {
+    if (this.changeMyPasswordForm.invalid) return;
+    const loader = await this.loadingCtrl.create({ message: 'Updating password...' });
+    await loader.present();
+
+    this.apiService.changeMyPassword(this.changeMyPasswordForm.value).subscribe({
+      next: async (res) => {
+        loader.dismiss();
+        this.showToast('Password updated successfully', 'success');
+        this.closeChangeMyPasswordModal();
+      },
+      error: async (err) => {
+        loader.dismiss();
+        this.showToast(err?.error?.error || 'Failed to update password', 'danger');
+      }
+    });
+  }
+
+  openResetPasswordModal(emp: any) {
+    this.selectedEmployeeForReset = emp;
+    this.isResetEmployeePasswordOpen = true;
+  }
+
+  closeResetEmployeePasswordModal() {
+    this.isResetEmployeePasswordOpen = false;
+    this.selectedEmployeeForReset = null;
+    this.resetEmployeePasswordForm.reset();
+  }
+
+  async onResetEmployeePassword() {
+    if (this.resetEmployeePasswordForm.invalid || !this.selectedEmployeeForReset) return;
+    const loader = await this.loadingCtrl.create({ message: 'Resetting password...' });
+    await loader.present();
+
+    this.apiService.resetEmployeePassword(this.selectedEmployeeForReset.uuid, this.resetEmployeePasswordForm.value).subscribe({
+      next: async (res) => {
+        loader.dismiss();
+        this.showToast('Employee password reset successfully', 'success');
+        this.closeResetEmployeePasswordModal();
+      },
+      error: async (err) => {
+        loader.dismiss();
+        this.showToast(err?.error?.error || 'Failed to reset employee password', 'danger');
       }
     });
   }

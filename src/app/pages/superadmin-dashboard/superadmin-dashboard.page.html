@@ -2,7 +2,10 @@
   <ion-toolbar>
     <ion-title>Superadmin Control Center</ion-title>
     <ion-buttons slot="end">
-      <ion-button (click)="logout()" color="danger">
+      <ion-button (click)="openChangeMyPasswordModal()" color="light" style="margin-right: 8px;" title="Change Password">
+        <ion-icon name="key-outline" slot="icon-only"></ion-icon>
+      </ion-button>
+      <ion-button (click)="logout()" color="danger" title="Logout">
         <ion-icon name="log-out-outline" slot="icon-only"></ion-icon>
       </ion-button>
     </ion-buttons>
@@ -14,8 +17,22 @@
     <h2>LendFlow Operations</h2>
     <p>Logged in as: Superadmin | System-wide access</p>
   </div>
-
   <div class="content-container">
+    
+    <!-- Superadmin Metrics -->
+    <div class="metrics-grid" style="display: flex; gap: 16px; margin-bottom: 24px; padding: 0 4px;">
+      <div class="metric-card" style="flex: 1; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 16px; padding: 20px; text-align: center;">
+        <ion-icon name="business-outline" style="font-size: 32px; color: #3b82f6; margin-bottom: 8px;"></ion-icon>
+        <p style="color: #93c5fd; font-size: 14px; font-weight: 600; text-transform: uppercase; margin: 0 0 8px 0;">Total Organizations</p>
+        <h2 style="color: white; font-size: 36px; font-weight: 700; margin: 0;">{{ organizations.length }}</h2>
+      </div>
+
+      <div class="metric-card" style="flex: 1; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 16px; padding: 20px; text-align: center;">
+        <ion-icon name="people-circle-outline" style="font-size: 32px; color: #10b981; margin-bottom: 8px;"></ion-icon>
+        <p style="color: #6ee7b7; font-size: 14px; font-weight: 600; text-transform: uppercase; margin: 0 0 8px 0;">Total Admins</p>
+        <h2 style="color: white; font-size: 36px; font-weight: 700; margin: 0;">{{ admins.length }}</h2>
+      </div>
+    </div>
     <!-- Section: Organizations -->
     <div class="section-card glass-panel">
       <div class="card-header">
@@ -150,4 +167,34 @@
       </ion-content>
     </ng-template>
   </ion-modal>
+
+  <!-- Change My Password Modal -->
+  <ion-modal [isOpen]="isChangeMyPasswordOpen" (didDismiss)="closeChangeMyPasswordModal()" class="glass-modal" [initialBreakpoint]="0.7" [breakpoints]="[0, 0.7]">
+    <ng-template>
+      <ion-header class="ion-no-border">
+        <ion-toolbar>
+          <ion-title>Change My Password</ion-title>
+          <ion-buttons slot="end">
+            <ion-button (click)="closeChangeMyPasswordModal()">Close</ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+      <ion-content class="modal-bg">
+        <form [formGroup]="changeMyPasswordForm" (ngSubmit)="onChangeMyPassword()" class="modal-form">
+          <div class="input-group">
+            <label>Current Password *</label>
+            <input type="password" formControlName="current_password" placeholder="Enter current password" />
+          </div>
+          <div class="input-group">
+            <label>New Password *</label>
+            <input type="password" formControlName="new_password" placeholder="Min 6 characters" />
+          </div>
+          <button type="submit" [disabled]="changeMyPasswordForm.invalid" class="submit-modal-btn">
+            Update Password
+          </button>
+        </form>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+
 </ion-content>

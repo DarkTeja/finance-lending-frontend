@@ -18,9 +18,11 @@ export class SuperadminDashboardPage implements OnInit {
 
   orgForm!: FormGroup;
   adminForm!: FormGroup;
+  changeMyPasswordForm!: FormGroup;
 
   isAddOrgOpen = false;
   isAddAdminOpen = false;
+  isChangeMyPasswordOpen = false;
 
   constructor(
     private fb: FormBuilder,
@@ -46,6 +48,11 @@ export class SuperadminDashboardPage implements OnInit {
       name: ['', [Validators.required, Validators.minLength(3)]],
       mobile_number: ['', [Validators.pattern('^[0-9]{10}$')]],
       organization_uuid: ['', [Validators.required]]
+    });
+
+    this.changeMyPasswordForm = this.fb.group({
+      current_password: ['', [Validators.required]],
+      new_password: ['', [Validators.required, Validators.minLength(6)]]
     });
   }
 
@@ -105,6 +112,33 @@ export class SuperadminDashboardPage implements OnInit {
       error: async (err) => {
         loader.dismiss();
         this.showToast(err?.error?.error || 'Failed to create admin', 'danger');
+      }
+    });
+  }
+
+  openChangeMyPasswordModal() {
+    this.isChangeMyPasswordOpen = true;
+  }
+
+  closeChangeMyPasswordModal() {
+    this.isChangeMyPasswordOpen = false;
+    this.changeMyPasswordForm.reset();
+  }
+
+  async onChangeMyPassword() {
+    if (this.changeMyPasswordForm.invalid) return;
+    const loader = await this.loadingCtrl.create({ message: 'Updating password...' });
+    await loader.present();
+
+    this.apiService.changeMyPassword(this.changeMyPasswordForm.value).subscribe({
+      next: async (res) => {
+        loader.dismiss();
+        this.showToast('Password updated successfully', 'success');
+        this.closeChangeMyPasswordModal();
+      },
+      error: async (err) => {
+        loader.dismiss();
+        this.showToast(err?.error?.error || 'Failed to update password', 'danger');
       }
     });
   }

@@ -28,6 +28,10 @@ export class ApiService {
     return this.http.get(`${this.baseUrl}/auth/me`, { headers: this.getHeaders() });
   }
 
+  changeMyPassword(data: any): Observable<any> {
+    return this.http.put(`${this.baseUrl}/auth/me/password`, data, { headers: this.getHeaders() });
+  }
+
   // --- Employees ---
   getEmployees(): Observable<any> {
     return this.http.get(`${this.baseUrl}/users/employees`, { headers: this.getHeaders() });
