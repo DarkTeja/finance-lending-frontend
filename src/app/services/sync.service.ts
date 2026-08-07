@@ -43,7 +43,7 @@ export class SyncService {
 
   async checkActualConnection(): Promise<boolean> {
     try {
-      const response = await fetch('http://192.168.1.25:3000/health');
+      const response = await fetch('http://192.168.1.40:3000/health');
       const online = response.ok;
       this.isOnlineSubject.next(online);
       return online;

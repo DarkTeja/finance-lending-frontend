@@ -21,6 +21,10 @@ export class AuthService {
     return localStorage.getItem('token');
   }
 
+  updateUser(user: any) {
+    localStorage.setItem('user', JSON.stringify(user));
+  }
+
   isLoggedIn(): boolean {
     return !!this.getToken();
   }

@@ -7,7 +7,7 @@ import { Observable } from 'rxjs';
 })
 export class ApiService {
   // Use host PC local network IP so mobile browser can connect
-  private readonly baseUrl = 'http://192.168.1.25:3000';
+  private readonly baseUrl = 'http://192.168.1.40:3000';
 
   constructor(private http: HttpClient) {}
 
@@ -22,6 +22,10 @@ export class ApiService {
   // --- Auth ---
   login(data: any): Observable<any> {
     return this.http.post(`${this.baseUrl}/auth/login`, data);
+  }
+
+  getAuthMe(): Observable<any> {
+    return this.http.get(`${this.baseUrl}/auth/me`, { headers: this.getHeaders() });
   }
 
   // --- Employees ---
@@ -108,5 +112,51 @@ export class ApiService {
 
   updateCollection(uuid: string, data: any): Observable<any> {
     return this.http.put(`${this.baseUrl}/collections/${uuid}`, data, { headers: this.getHeaders() });
+  }
+
+  getDashboardStats(): Observable<any> {
+    return this.http.get(`${this.baseUrl}/dashboard/stats`, { headers: this.getHeaders() });
+  }
+
+  addExpense(data: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}/expenses`, data, { headers: this.getHeaders() });
+  }
+
+  getExpensesToday(): Observable<any> {
+    return this.http.get(`${this.baseUrl}/expenses/today`, { headers: this.getHeaders() });
+  }
+
+  getAllExpenses(): Observable<any> {
+    return this.http.get(`${this.baseUrl}/expenses/all`, { headers: this.getHeaders() });
+  }
+
+  updateExpense(uuid: string, data: any): Observable<any> {
+    return this.http.put(`${this.baseUrl}/expenses/${uuid}`, data, { headers: this.getHeaders() });
+  }
+
+  deleteExpense(uuid: string): Observable<any> {
+    return this.http.delete(`${this.baseUrl}/expenses/${uuid}`, { headers: this.getHeaders() });
+  }
+
+  // --- Investments ---
+  getInvestments(): Observable<any> {
+    return this.http.get(`${this.baseUrl}/investments`, { headers: this.getHeaders() });
+  }
+
+  addInvestment(data: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}/investments`, data, { headers: this.getHeaders() });
+  }
+
+  updateInvestment(uuid: string, data: any): Observable<any> {
+    return this.http.put(`${this.baseUrl}/investments/${uuid}`, data, { headers: this.getHeaders() });
+  }
+
+  // --- Cash Book / Ledger ---
+  getCashbook(date?: string): Observable<any> {
+    let url = `${this.baseUrl}/dashboard/cashbook`;
+    if (date) {
+      url += `?date=${date}`;
+    }
+    return this.http.get(url, { headers: this.getHeaders() });
   }
 }

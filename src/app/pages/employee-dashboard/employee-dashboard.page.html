@@ -13,6 +13,11 @@
       <div class="menu-divider">MENU</div>
 
       <ion-list class="menu-list" lines="none">
+        <ion-item button (click)="selectTab('dashboard')" [class.active-item]="activeTab === 'dashboard'" class="menu-item">
+          <ion-icon name="grid-outline" slot="start"></ion-icon>
+          <ion-label>Dashboard</ion-label>
+        </ion-item>
+
         <ion-item button (click)="selectTab('customers')" [class.active-item]="activeTab === 'customers'" class="menu-item">
           <ion-icon name="person-add-outline" slot="start"></ion-icon>
           <ion-label>Customers</ion-label>
@@ -33,13 +38,15 @@
           <ion-label>Total Collections</ion-label>
         </ion-item>
       </ion-list>
+    </ion-content>
 
-      <div class="sidebar-footer">
+    <ion-footer class="ion-no-border" style="--background: #10121a; border-top: 1px solid rgba(255, 255, 255, 0.03);">
+      <div class="sidebar-footer" style="position: static; border-top: none; padding: 20px 24px; background: #10121a;">
         <button class="logout-btn" (click)="logout()">
           <ion-icon name="log-out-outline"></ion-icon> Sign Out
         </button>
       </div>
-    </ion-content>
+    </ion-footer>
   </ion-menu>
 
   <!-- Main View Area -->
@@ -54,12 +61,40 @@
     </ion-header>
 
     <ion-content [fullscreen]="true" class="dashboard-bg">
+      <ion-refresher slot="fixed" (ionRefresh)="doRefresh($event)">
+        <ion-refresher-content></ion-refresher-content>
+      </ion-refresher>
+
       <div class="header-banner">
         <h2>{{ activeTab | uppercase }}</h2>
         <p>Hello, {{ currentUser?.name }} • {{ currentUser?.organization_name || 'Tenant Workspace' }}</p>
       </div>
 
       <div class="content-container">
+
+        <!-- TAB: DASHBOARD -->
+        <div *ngIf="activeTab === 'dashboard'" class="tab-content">
+          <div class="section-card glass-panel" style="margin-bottom: 20px;">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+              <h3>Today's Overview</h3>
+              <button class="action-btn" (click)="openAddExpenseModal()" style="background: rgba(231, 76, 60, 0.15); color: #e74c3c;">
+                <ion-icon name="remove-circle-outline" slot="start"></ion-icon> Add Expense
+              </button>
+            </div>
+            
+            <div style="display: flex; gap: 16px; flex-wrap: wrap; padding: 16px;">
+              <div class="metric-card" style="flex: 1; min-width: 200px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); padding: 20px; border-radius: 12px;">
+                <p style="margin: 0; color: #10b981; font-weight: 600; font-size: 14px;">Today Collection</p>
+                <h2 style="margin: 8px 0 0 0; color: white; font-size: 28px;">₹{{ dashboardStats.today_collection }}</h2>
+              </div>
+              
+              <div class="metric-card" style="flex: 1; min-width: 200px; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.2); padding: 20px; border-radius: 12px;">
+                <p style="margin: 0; color: #3b82f6; font-weight: 600; font-size: 14px;">Count Collection Today</p>
+                <h2 style="margin: 8px 0 0 0; color: white; font-size: 28px;">{{ dashboardStats.today_count }}</h2>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <!-- TAB: CUSTOMERS -->
         <div *ngIf="activeTab === 'customers'" class="tab-content">
@@ -544,6 +579,39 @@
               </div>
 
             </div>
+          </ion-content>
+        </ng-template>
+      </ion-modal>
+
+      <!-- Expense Modal -->
+      <ion-modal [isOpen]="isAddExpenseOpen" (didDismiss)="isAddExpenseOpen = false" class="glass-modal">
+        <ng-template>
+          <ion-header class="ion-no-border">
+            <ion-toolbar>
+              <ion-title>Record Daily Expense</ion-title>
+              <ion-buttons slot="end">
+                <ion-button (click)="isAddExpenseOpen = false" color="light">
+                  <ion-icon name="close-circle-outline"></ion-icon>
+                </ion-button>
+              </ion-buttons>
+            </ion-toolbar>
+          </ion-header>
+
+          <ion-content class="modal-bg">
+            <form [formGroup]="expenseForm" (ngSubmit)="onRecordExpense()" class="modal-form" style="padding: 20px;">
+              <div class="input-group">
+                <label>Amount (₹) *</label>
+                <input type="number" formControlName="amount" placeholder="E.g. 200" />
+              </div>
+              <div class="input-group">
+                <label>Reason *</label>
+                <input type="text" formControlName="reason" placeholder="E.g. Petrol, Food..." />
+              </div>
+              
+              <button type="submit" [disabled]="expenseForm.invalid" class="submit-modal-btn" style="background: #e74c3c;">
+                Log Expense
+              </button>
+            </form>
           </ion-content>
         </ng-template>
       </ion-modal>

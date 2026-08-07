@@ -9,13 +9,14 @@ import { DbService } from '../../services/db.service';
 import { SyncService } from '../../services/sync.service';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { DragDropModule, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 
 @Component({
   selector: 'app-admin-dashboard',
   templateUrl: './admin-dashboard.page.html',
   styleUrls: ['./admin-dashboard.page.scss'],
   standalone: true,
-  imports: [CommonModule, IonicModule, FormsModule, ReactiveFormsModule, RouterModule]
+  imports: [CommonModule, IonicModule, FormsModule, ReactiveFormsModule, RouterModule, DragDropModule]
 })
 export class AdminDashboardPage implements OnInit {
   currentUser: any;
@@ -23,7 +24,52 @@ export class AdminDashboardPage implements OnInit {
   customers: any[] = [];
   loans: any[] = [];
   
-  activeTab: 'users' | 'customers' | 'loans' | 'collection' | 'total-collections' | 'reports' = 'users';
+  activeTab: 'dashboard' | 'users' | 'customers' | 'loans' | 'collection' | 'total-collections' | 'reports' | 'investments' | 'expenses' | 'cashbook' = 'dashboard';
+
+  investments: any[] = [];
+  allExpenses: any[] = [];
+  investmentForm!: FormGroup;
+  editInvestmentForm!: FormGroup;
+  isEditInvestmentOpen = false;
+  selectedInvestmentForEdit: any = null;
+
+  dashboardStats: any = { 
+    today_collection: 0, 
+    bf_cash: 0, 
+    receivable_amount: 0, 
+    extra_amount: 0,
+    interests: 0,
+    total_investments: 0,
+    total_expenses: 0,
+    customer_count: 0,
+    employee_count: 0
+  };
+
+  isEditingLayout = false;
+  metricsConfig = [
+    { id: 'today', title: 'Today Collection', color: '#10b981', key: 'today_collection' },
+    { id: 'bfc', title: 'BF Cash', color: '#f59e0b', key: 'bf_cash' },
+    { id: 'rec', title: 'Receivable Amount', color: '#ef4444', key: 'receivable_amount' },
+    { id: 'pen', title: 'Penalty Amount', color: '#8b5cf6', key: 'extra_amount' },
+    { id: 'int', title: 'Interests', color: '#3b82f6', key: 'interests' },
+    { id: 'inv', title: 'Total Investments', color: '#ec4899', key: 'total_investments' },
+    { id: 'exp', title: 'Total Expenses', color: '#e74c3c', key: 'total_expenses' },
+    { id: 'cus', title: 'Customer Count', color: '#0ea5e9', key: 'customer_count' },
+    { id: 'emp', title: 'Employee Count', color: '#8b5cf6', key: 'employee_count' }
+  ];
+  
+  expenseForm!: FormGroup;
+  editExpenseForm!: FormGroup;
+  isAddExpenseOpen = false;
+  isEditExpenseOpen = false;
+  selectedExpenseForEdit: any = null;
+  expenseFilterDate: string = '';
+
+  // Cashbook / Ledger variables
+  cashbookDate: string = new Date().toISOString().split('T')[0];
+  todayIsoDate: string = new Date().toISOString().split('T')[0];
+  cashbookData: any = null;
+  cashbookClosingBalance: number = 0;
 
   employeeForm!: FormGroup;
   permissionForm!: FormGroup;
@@ -87,6 +133,47 @@ export class AdminDashboardPage implements OnInit {
     this.initForms();
     this.setupLoanCalculationListeners();
     this.loadData();
+
+    const savedLayout = localStorage.getItem('adminDashboardMetricsLayout');
+    if (savedLayout) {
+      try {
+        const order = JSON.parse(savedLayout);
+        this.metricsConfig.sort((a, b) => {
+          const idxA = order.indexOf(a.id);
+          const idxB = order.indexOf(b.id);
+          return (idxA !== -1 ? idxA : 999) - (idxB !== -1 ? idxB : 999);
+        });
+      } catch (e) {
+        console.error('Error loading dashboard layout', e);
+      }
+    }
+  }
+
+  ionViewWillEnter() {
+    this.loadData();
+  }
+
+  doRefresh(event: any) {
+    this.loadData();
+    // In a real app, you might want to wait for loadData observables to complete,
+    // but for now we can just finish the refresher after 1 second.
+    setTimeout(() => {
+      event.target.complete();
+    }, 1000);
+  }
+
+  toggleEditLayout() {
+    this.isEditingLayout = !this.isEditingLayout;
+  }
+
+  dropMetric(event: CdkDragDrop<any[]>) {
+    moveItemInArray(this.metricsConfig, event.previousIndex, event.currentIndex);
+    const order = this.metricsConfig.map(m => m.id);
+    localStorage.setItem('adminDashboardMetricsLayout', JSON.stringify(order));
+  }
+
+  trackByMetricId(index: number, metric: any): string {
+    return metric.id;
   }
 
   initForms() {
@@ -151,6 +238,26 @@ export class AdminDashboardPage implements OnInit {
       collected_amount: ['', [Validators.required, Validators.min(1)]],
       collection_date: ['', Validators.required],
       payment_type: ['Cash', [Validators.required]]
+    });
+
+    this.expenseForm = this.fb.group({
+      amount: ['', [Validators.required, Validators.min(1)]],
+      reason: ['', Validators.required]
+    });
+
+    this.editExpenseForm = this.fb.group({
+      amount: ['', [Validators.required, Validators.min(1)]],
+      reason: ['', Validators.required]
+    });
+
+    this.investmentForm = this.fb.group({
+      amount: ['', [Validators.required, Validators.min(1)]],
+      source: ['', Validators.required]
+    });
+
+    this.editInvestmentForm = this.fb.group({
+      amount: ['', [Validators.required, Validators.min(1)]],
+      source: ['', Validators.required]
     });
   }
 
@@ -306,9 +413,112 @@ export class AdminDashboardPage implements OnInit {
         this.collections = await this.dbService.getCollections();
       }
     });
+
+    this.apiService.getInvestments().subscribe({
+      next: (res) => this.investments = res,
+      error: (err) => console.error('Error loading investments:', err)
+    });
+
+    this.apiService.getAllExpenses().subscribe({
+      next: (res) => this.allExpenses = res,
+      error: (err) => console.error('Error loading expenses:', err)
+    });
+
+    this.loadDashboardStats();
+    this.loadCashbook();
   }
 
-  selectTab(tab: 'users' | 'customers' | 'loans' | 'collection' | 'total-collections' | 'reports') {
+  loadCashbook() {
+    this.apiService.getCashbook(this.cashbookDate).subscribe({
+      next: (res) => {
+        this.cashbookData = res;
+        this.calculateCashbookClosingBalance();
+      },
+      error: (err) => {
+        console.error('Error loading cashbook:', err);
+        this.cashbookData = null;
+      }
+    });
+  }
+
+  onCashbookDateChange(event: any) {
+    if (event.detail && event.detail.value) {
+      this.cashbookDate = event.detail.value.split('T')[0];
+      this.loadCashbook();
+    }
+  }
+
+  calculateCashbookClosingBalance() {
+    if (!this.cashbookData) return;
+    let balance = parseFloat(this.cashbookData.opening_balance) || 0;
+    
+    if (this.cashbookData.transactions && this.cashbookData.transactions.length > 0) {
+      for (const tx of this.cashbookData.transactions) {
+        const amount = parseFloat(tx.amount) || 0;
+        if (tx.type === 'collection' || tx.type === 'investment') {
+          balance += amount;
+        } else if (tx.type === 'loan' || tx.type === 'expense') {
+          balance -= amount;
+        }
+      }
+    }
+    this.cashbookClosingBalance = balance;
+  }
+
+  exportCashbookToPDF() {
+    if (!this.cashbookData) return;
+
+    const doc = new jsPDF();
+    
+    // Title
+    doc.setFontSize(16);
+    doc.text(`Cash Book / Ledger`, 14, 15);
+    
+    doc.setFontSize(11);
+    doc.text(`Date: ${this.cashbookDate}`, 14, 23);
+    doc.text(`Opening Balance: Rs. ${this.cashbookData.opening_balance}`, 14, 29);
+
+    const tableData = [];
+    
+    if (this.cashbookData.transactions && this.cashbookData.transactions.length > 0) {
+      for (const tx of this.cashbookData.transactions) {
+        const type = tx.type.charAt(0).toUpperCase() + tx.type.slice(1);
+        const inflowOutflow = (tx.type === 'collection' || tx.type === 'investment') ? 'Inflow' : 'Outflow';
+        const amountStr = `${inflowOutflow === 'Inflow' ? '+' : '-'} Rs. ${tx.amount}`;
+        
+        tableData.push([
+          new Date(tx.tx_date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+          type,
+          tx.description,
+          amountStr
+        ]);
+      }
+    }
+
+    autoTable(doc, {
+      startY: 35,
+      head: [['Time', 'Type', 'Description', 'Amount']],
+      body: tableData,
+      theme: 'grid',
+      styles: { fontSize: 10 },
+      headStyles: { fillColor: [41, 128, 185] },
+    });
+
+    const finalY = (doc as any).lastAutoTable.finalY || 35;
+    doc.setFontSize(12);
+    doc.text(`Closing Balance: Rs. ${this.cashbookClosingBalance}`, 14, finalY + 10);
+
+    doc.save(`CashBook_${this.cashbookDate}.pdf`);
+  }
+
+  loadDashboardStats() {
+    this.apiService.getDashboardStats().subscribe({
+      next: (res) => this.dashboardStats = res,
+      error: (err) => console.error('Error loading dashboard stats:', err)
+    });
+  }
+
+  selectTab(tab: 'dashboard' | 'users' | 'customers' | 'loans' | 'collection' | 'total-collections' | 'reports' | 'investments' | 'expenses' | 'cashbook') {
     this.activeTab = tab;
     this.menuCtrl.close();
   }
@@ -563,6 +773,15 @@ export class AdminDashboardPage implements OnInit {
     return filtered.sort((a, b) => {
       return new Date(b.collection_date).getTime() - new Date(a.collection_date).getTime();
     });
+  }
+
+  getFilteredExpenses() {
+    let list = [...this.allExpenses];
+    if (this.expenseFilterDate) {
+      const filterDate = new Date(this.expenseFilterDate).toDateString();
+      list = list.filter(e => new Date(e.expense_date).toDateString() === filterDate);
+    }
+    return list.sort((a, b) => new Date(b.expense_date).getTime() - new Date(a.expense_date).getTime());
   }
 
   getEmployeeCollectionSummary(): { name: string, count: number, total: number }[] {
@@ -976,6 +1195,167 @@ export class AdminDashboardPage implements OnInit {
       const r = Math.random() * 16 | 0;
       const v = c === 'x' ? r : (r & 0x3 | 0x8);
       return v.toString(16);
+    });
+  }
+
+  openAddExpenseModal() {
+    this.expenseForm.reset();
+    this.isAddExpenseOpen = true;
+  }
+
+  async onRecordExpense() {
+    if (this.expenseForm.invalid) return;
+    
+    const loader = await this.loadingCtrl.create({
+      message: 'Recording expense...',
+      spinner: 'crescent'
+    });
+    await loader.present();
+
+    this.apiService.addExpense(this.expenseForm.value).subscribe({
+      next: async () => {
+        loader.dismiss();
+        this.isAddExpenseOpen = false;
+        this.expenseForm.reset(); // Reset form on success
+        this.showToast('Expense recorded successfully', 'success');
+        this.apiService.getAllExpenses().subscribe({
+          next: (res) => this.allExpenses = res
+        });
+        this.loadDashboardStats();
+      },
+      error: async (err) => {
+        loader.dismiss();
+        this.showToast(err?.error?.error || 'Failed to record expense', 'danger');
+      }
+    });
+  }
+
+  async onRecordInvestment() {
+    if (this.investmentForm.invalid) return;
+
+    const loader = await this.loadingCtrl.create({
+      message: 'Recording investment...',
+      spinner: 'crescent'
+    });
+    await loader.present();
+
+    this.apiService.addInvestment(this.investmentForm.value).subscribe({
+      next: async () => {
+        loader.dismiss();
+        this.investmentForm.reset();
+        this.showToast('Investment recorded successfully', 'success');
+        this.apiService.getInvestments().subscribe({
+          next: (res) => this.investments = res
+        });
+      },
+      error: async (err) => {
+        loader.dismiss();
+        this.showToast(err?.error?.error || 'Failed to record investment', 'danger');
+      }
+    });
+  }
+
+  openEditExpenseModal(expense: any) {
+    this.selectedExpenseForEdit = expense;
+    this.editExpenseForm.patchValue({
+      amount: expense.amount,
+      reason: expense.reason
+    });
+    this.isEditExpenseOpen = true;
+  }
+
+  closeEditExpenseModal() {
+    this.isEditExpenseOpen = false;
+    this.selectedExpenseForEdit = null;
+    this.editExpenseForm.reset();
+  }
+
+  async onUpdateExpense() {
+    if (this.editExpenseForm.invalid || !this.selectedExpenseForEdit) return;
+
+    const loader = await this.loadingCtrl.create({ message: 'Updating expense...' });
+    await loader.present();
+
+    this.apiService.updateExpense(this.selectedExpenseForEdit.uuid, this.editExpenseForm.value).subscribe({
+      next: async () => {
+        loader.dismiss();
+        this.showToast('Expense updated successfully', 'success');
+        this.closeEditExpenseModal();
+        this.apiService.getAllExpenses().subscribe({ next: (res) => this.allExpenses = res });
+        this.loadDashboardStats();
+      },
+      error: async (err) => {
+        loader.dismiss();
+        this.showToast(err?.error?.error || 'Failed to update expense', 'danger');
+      }
+    });
+  }
+
+  async onDeleteExpense(uuid: string) {
+    const alert = await this.alertCtrl.create({
+      header: 'Confirm Delete',
+      message: 'Are you sure you want to delete this expense? This action cannot be undone.',
+      buttons: [
+        { text: 'Cancel', role: 'cancel' },
+        {
+          text: 'Delete',
+          role: 'destructive',
+          handler: async () => {
+            const loader = await this.loadingCtrl.create({ message: 'Deleting expense...' });
+            await loader.present();
+
+            this.apiService.deleteExpense(uuid).subscribe({
+              next: async () => {
+                loader.dismiss();
+                this.showToast('Expense deleted successfully', 'success');
+                this.apiService.getAllExpenses().subscribe({ next: (res) => this.allExpenses = res });
+                this.loadDashboardStats();
+              },
+              error: async (err) => {
+                loader.dismiss();
+                this.showToast(err?.error?.error || 'Failed to delete expense', 'danger');
+              }
+            });
+          }
+        }
+      ]
+    });
+    await alert.present();
+  }
+
+  openEditInvestmentModal(investment: any) {
+    this.selectedInvestmentForEdit = investment;
+    this.editInvestmentForm.patchValue({
+      amount: investment.amount,
+      source: investment.source
+    });
+    this.isEditInvestmentOpen = true;
+  }
+
+  closeEditInvestmentModal() {
+    this.isEditInvestmentOpen = false;
+    this.selectedInvestmentForEdit = null;
+    this.editInvestmentForm.reset();
+  }
+
+  async onUpdateInvestment() {
+    if (this.editInvestmentForm.invalid || !this.selectedInvestmentForEdit) return;
+
+    const loader = await this.loadingCtrl.create({ message: 'Updating investment...' });
+    await loader.present();
+
+    this.apiService.updateInvestment(this.selectedInvestmentForEdit.uuid, this.editInvestmentForm.value).subscribe({
+      next: async () => {
+        loader.dismiss();
+        this.showToast('Investment updated successfully', 'success');
+        this.closeEditInvestmentModal();
+        this.apiService.getInvestments().subscribe({ next: (res) => this.investments = res });
+        this.loadDashboardStats();
+      },
+      error: async (err) => {
+        loader.dismiss();
+        this.showToast(err?.error?.error || 'Failed to update investment', 'danger');
+      }
     });
   }
 

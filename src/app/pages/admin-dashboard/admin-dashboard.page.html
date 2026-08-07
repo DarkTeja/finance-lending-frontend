@@ -13,6 +13,11 @@
       <div class="menu-divider">MENU</div>
 
       <ion-list class="menu-list" lines="none">
+        <ion-item button (click)="selectTab('dashboard')" [class.active-item]="activeTab === 'dashboard'" class="menu-item">
+          <ion-icon name="grid-outline" slot="start"></ion-icon>
+          <ion-label>Dashboard</ion-label>
+        </ion-item>
+
         <ion-item button (click)="selectTab('users')" [class.active-item]="activeTab === 'users'" class="menu-item">
           <ion-icon name="people-outline" slot="start"></ion-icon>
           <ion-label>Users (Employees)</ion-label>
@@ -38,18 +43,35 @@
           <ion-label>Total Collections</ion-label>
         </ion-item>
 
+        <ion-item button (click)="selectTab('investments')" [class.active-item]="activeTab === 'investments'" class="menu-item">
+          <ion-icon name="briefcase-outline" slot="start"></ion-icon>
+          <ion-label>Investments</ion-label>
+        </ion-item>
+
+        <ion-item button (click)="selectTab('expenses')" [class.active-item]="activeTab === 'expenses'" class="menu-item">
+          <ion-icon name="receipt-outline" slot="start"></ion-icon>
+          <ion-label>Expenses</ion-label>
+        </ion-item>
+
+        <ion-item button (click)="selectTab('cashbook')" [class.active-item]="activeTab === 'cashbook'" class="menu-item">
+          <ion-icon name="book-outline" slot="start"></ion-icon>
+          <ion-label>Cash Book (B/F)</ion-label>
+        </ion-item>
+
         <ion-item button (click)="selectTab('reports')" [class.active-item]="activeTab === 'reports'" class="menu-item">
           <ion-icon name="analytics-outline" slot="start"></ion-icon>
           <ion-label>Reports</ion-label>
         </ion-item>
       </ion-list>
+    </ion-content>
 
-      <div class="sidebar-footer">
+    <ion-footer class="ion-no-border" style="--background: #10121a; border-top: 1px solid rgba(255, 255, 255, 0.03);">
+      <div class="sidebar-footer" style="position: static; border-top: none; padding: 20px 24px; background: #10121a;">
         <button class="logout-btn" (click)="logout()">
           <ion-icon name="log-out-outline"></ion-icon> Sign Out
         </button>
       </div>
-    </ion-content>
+    </ion-footer>
   </ion-menu>
 
   <!-- Main View Area -->
@@ -64,12 +86,46 @@
     </ion-header>
 
     <ion-content [fullscreen]="true" class="dashboard-bg">
+      <ion-refresher slot="fixed" (ionRefresh)="doRefresh($event)">
+        <ion-refresher-content></ion-refresher-content>
+      </ion-refresher>
+
       <div class="header-banner">
         <h2>{{ activeTab | uppercase }}</h2>
         <p>{{ currentUser?.organization_name || 'Organization Workspace' }}</p>
       </div>
 
       <div class="content-container">
+
+        <!-- TAB: DASHBOARD -->
+        <div *ngIf="activeTab === 'dashboard'" class="tab-content">
+          <div class="section-card glass-panel" style="margin-bottom: 20px;">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+              <h3>Admin Overview</h3>
+              <button class="action-btn" (click)="toggleEditLayout()" [ngStyle]="{'background': isEditingLayout ? 'rgba(59, 130, 246, 0.15)' : 'rgba(107, 114, 128, 0.15)', 'color': isEditingLayout ? '#3b82f6' : '#6b7280'}">
+                <ion-icon [name]="isEditingLayout ? 'checkmark-circle-outline' : 'options-outline'" slot="start"></ion-icon> 
+                {{ isEditingLayout ? 'Done Editing' : 'Edit Layout' }}
+              </button>
+            </div>
+            
+            <div cdkDropList cdkDropListOrientation="mixed" (cdkDropListDropped)="dropMetric($event)" class="metrics-grid" style="display: flex; flex-wrap: wrap; gap: 12px; padding: 16px;">
+              
+              <div *ngFor="let metric of metricsConfig; trackBy: trackByMetricId" cdkDrag [cdkDragDisabled]="!isEditingLayout" class="metric-card" [ngClass]="{'is-draggable': isEditingLayout}" [ngStyle]="{'background': metric.color + '1a', 'border': '1px solid ' + metric.color + '33', 'padding': '16px', 'border-radius': '12px', 'display': 'flex', 'flex-direction': 'column', 'justify-content': 'center', 'position': 'relative', 'flex': '0 0 calc(50% - 6px)', 'width': 'calc(50% - 6px)', 'aspect-ratio': '1/1'}">
+                
+                <div [style.visibility]="isEditingLayout ? 'visible' : 'hidden'" class="drag-handle" style="position: absolute; top: 8px; right: 8px; cursor: grab; color: {{metric.color}}; opacity: 0.7; z-index: 10;">
+                  <ion-icon name="move-outline" style="font-size: 20px;"></ion-icon>
+                </div>
+
+                <p [ngStyle]="{'margin': '0', 'color': metric.color, 'font-weight': '600', 'font-size': '13px'}">{{ metric.title }}</p>
+                
+                <h2 *ngIf="metric.key !== 'customer_count' && metric.key !== 'employee_count'" style="margin: 8px 0 0 0; color: white; font-size: 22px;">₹{{ dashboardStats[metric.key] | number:'1.0-0' }}</h2>
+                
+                <h2 *ngIf="metric.key === 'customer_count' || metric.key === 'employee_count'" style="margin: 8px 0 0 0; color: white; font-size: 24px;">{{ dashboardStats[metric.key] }}</h2>
+              </div>
+              
+            </div>
+          </div>
+        </div>
 
         <!-- TAB: USERS (EMPLOYEES) -->
         <div *ngIf="activeTab === 'users'" class="tab-content">
@@ -450,12 +506,216 @@
           </div>
         </div>
 
+        <!-- TAB: CASH BOOK (B/F) -->
+        <div *ngIf="activeTab === 'cashbook'" class="tab-content">
+          <div class="section-card glass-panel">
+            
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 16px; margin-bottom: 20px;">
+              <h3>Cash Book Ledger</h3>
+              
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <button class="action-btn" (click)="exportCashbookToPDF()" style="background: rgba(41, 128, 185, 0.15); color: #3498db; border: 1px solid rgba(41, 128, 185, 0.3); padding: 8px 16px; border-radius: 8px; font-size: 14px;">
+                  <ion-icon name="download-outline" slot="start"></ion-icon> 
+                  Export PDF
+                </button>
+                <button class="action-btn" id="open-cashbook-date" style="background: rgba(255,255,255,0.05); color: #f8fafc; border: 1px solid rgba(255,255,255,0.1); padding: 8px 16px; border-radius: 8px; font-size: 14px;">
+                  <ion-icon name="calendar-outline" slot="start"></ion-icon> 
+                  {{ cashbookDate | date:'fullDate' }}
+                </button>
+                <ion-modal trigger="open-cashbook-date" [initialBreakpoint]="0.6" [breakpoints]="[0, 0.6]">
+                  <ng-template>
+                    <ion-content class="modal-bg">
+                      <ion-datetime presentation="date" [(ngModel)]="cashbookDate" (ionChange)="onCashbookDateChange($event)" [max]="todayIsoDate" size="cover"></ion-datetime>
+                    </ion-content>
+                  </ng-template>
+                </ion-modal>
+              </div>
+            </div>
+
+            <div *ngIf="cashbookData">
+              <!-- Opening Balance -->
+              <div style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 24px;">
+                <p style="color: #60a5fa; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 8px 0;">Opening Balance</p>
+                <h2 style="color: #ffffff; font-size: 32px; font-weight: 700; margin: 0;">₹{{ cashbookData.opening_balance | number:'1.2-2' }}</h2>
+              </div>
+
+              <!-- Ledger List -->
+              <h4 style="color: #94a3b8; margin-bottom: 16px; font-size: 15px;">Transactions for {{ cashbookDate | date:'mediumDate' }}</h4>
+              
+              <div *ngIf="!cashbookData.transactions || cashbookData.transactions.length === 0" class="empty-state" style="padding: 30px; text-align: center;">
+                <ion-icon name="document-text-outline" style="font-size: 40px; color: #475569; margin-bottom: 12px;"></ion-icon>
+                <p style="color: #94a3b8; font-size: 15px;">No transactions found for this date.</p>
+              </div>
+
+              <div class="collection-logs" *ngIf="cashbookData.transactions && cashbookData.transactions.length > 0" style="margin-bottom: 24px;">
+                <div *ngFor="let tx of cashbookData.transactions" class="col-log-card" 
+                     [ngStyle]="{'border-left': '4px solid ' + (tx.type === 'collection' || tx.type === 'investment' ? '#10b981' : '#e74c3c')}">
+                  
+                  <div class="col-log-header">
+                    <span class="rcpt" style="color: white; font-weight: 600;">
+                      <span *ngIf="tx.type === 'investment'" style="color: #10b981; font-size: 12px; text-transform: uppercase; border: 1px solid #10b981; padding: 2px 6px; border-radius: 4px; margin-right: 8px;">Investment</span>
+                      <span *ngIf="tx.type === 'collection'" style="color: #10b981; font-size: 12px; text-transform: uppercase; border: 1px solid #10b981; padding: 2px 6px; border-radius: 4px; margin-right: 8px;">Collection</span>
+                      <span *ngIf="tx.type === 'loan'" style="color: #e74c3c; font-size: 12px; text-transform: uppercase; border: 1px solid #e74c3c; padding: 2px 6px; border-radius: 4px; margin-right: 8px;">Loan Given</span>
+                      <span *ngIf="tx.type === 'expense'" style="color: #e74c3c; font-size: 12px; text-transform: uppercase; border: 1px solid #e74c3c; padding: 2px 6px; border-radius: 4px; margin-right: 8px;">Expense</span>
+                      {{ tx.description }}
+                    </span>
+                    <span class="amt" [ngStyle]="{'color': tx.type === 'collection' || tx.type === 'investment' ? '#10b981' : '#e74c3c'}">
+                      {{ tx.type === 'collection' || tx.type === 'investment' ? '+' : '-' }} ₹{{ tx.amount }}
+                    </span>
+                  </div>
+                  <p class="meta" style="margin-top: 8px; font-family: monospace;">
+                    {{ tx.tx_date | date:'mediumTime' }}
+                  </p>
+                </div>
+              </div>
+
+              <!-- Closing Balance -->
+              <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 12px; padding: 20px; text-align: center; margin-top: 16px;">
+                <p style="color: #34d399; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 8px 0;">Closing Balance</p>
+                <h2 style="color: #ffffff; font-size: 32px; font-weight: 700; margin: 0;">₹{{ cashbookClosingBalance | number:'1.2-2' }}</h2>
+              </div>
+            </div>
+
+            <!-- Loader -->
+            <div *ngIf="!cashbookData" style="text-align: center; padding: 40px;">
+              <ion-spinner name="crescent" color="primary"></ion-spinner>
+              <p style="color: #94a3b8; margin-top: 12px;">Loading cashbook ledger...</p>
+            </div>
+
+          </div>
+        </div>
+
         <!-- TAB: REPORTS -->
         <div *ngIf="activeTab === 'reports'" class="tab-content">
           <div class="glass-panel text-center" style="padding: 40px; color: #8f9299;">
             <ion-icon name="analytics-outline" style="font-size: 48px; color: #ff0054; margin-bottom: 12px;"></ion-icon>
             <h3>Reports & Analytics</h3>
             <p>Performance indicators, employee target sheets, and collection audits will display here in the next step.</p>
+          </div>
+        </div>
+
+        <!-- TAB: INVESTMENTS -->
+        <div *ngIf="activeTab === 'investments'" class="tab-content">
+          <div class="section-card glass-panel">
+            <div class="card-header">
+              <h3>Investments / Capital</h3>
+            </div>
+            
+            <div class="collections-container">
+              <!-- Left side: Form -->
+              <div class="collection-form-side">
+                <h4>Record Capital Injection</h4>
+                <form [formGroup]="investmentForm" (ngSubmit)="onRecordInvestment()">
+                  <div class="input-group">
+                    <label>Amount (₹) *</label>
+                    <input type="number" formControlName="amount" placeholder="E.g. 50000" />
+                  </div>
+                  <div class="input-group">
+                    <label>Source / Description *</label>
+                    <input type="text" formControlName="source" placeholder="E.g. Partner Capital, Bank Loan" />
+                  </div>
+                  <button type="submit" [disabled]="investmentForm.invalid" class="submit-modal-btn">
+                    Save Investment
+                  </button>
+                </form>
+              </div>
+              
+              <!-- Right side: List -->
+              <div class="collection-list-side">
+                <h4>Investment Logs</h4>
+                <div *ngIf="investments.length === 0" class="empty-state" style="padding: 20px;">
+                  <ion-icon name="briefcase-outline"></ion-icon>
+                  <p>No investments recorded yet.</p>
+                </div>
+
+                <div class="collection-logs">
+                  <div *ngFor="let inv of investments" class="col-log-card" style="border-left: 4px solid #10b981;">
+                    <div class="col-log-header">
+                      <span class="rcpt" style="color: white; font-weight: 700;">
+                        {{ inv.source }}
+                        <ion-icon name="create-outline" style="cursor: pointer; color: #10b981; margin-left: 6px;" (click)="openEditInvestmentModal(inv)"></ion-icon>
+                      </span>
+                      <span class="amt" style="color: #10b981;">₹{{ inv.amount }}</span>
+                    </div>
+                    <p class="meta" style="margin-top: 8px;">
+                      Added by: {{ inv.added_by_name }} • {{ inv.investment_date | date:'medium' }}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB: EXPENSES -->
+        <div *ngIf="activeTab === 'expenses'" class="tab-content">
+          <div class="section-card glass-panel">
+            <div class="card-header">
+              <h3>Organization Expenses</h3>
+            </div>
+            
+            <div class="collections-container">
+              <!-- Left side: Form -->
+              <div class="collection-form-side">
+                <h4>Record Expense</h4>
+                <form [formGroup]="expenseForm" (ngSubmit)="onRecordExpense()">
+                  <div class="input-group">
+                    <label>Amount (₹) *</label>
+                    <input type="number" formControlName="amount" placeholder="E.g. 200" />
+                  </div>
+                  <div class="input-group">
+                    <label>Reason *</label>
+                    <input type="text" formControlName="reason" placeholder="E.g. Office Rent, Electricity..." />
+                  </div>
+                  <button type="submit" [disabled]="expenseForm.invalid" class="submit-modal-btn" style="background: #e74c3c;">
+                    Save Expense
+                  </button>
+                </form>
+              </div>
+              
+              <!-- Right side: List -->
+              <div class="collection-list-side">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                  <h4 style="margin: 0;">All Expense Logs</h4>
+                  
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <button class="action-btn" id="open-expense-date-picker" style="background: rgba(255,255,255,0.05); color: #f8fafc; border: 1px solid rgba(255,255,255,0.1); padding: 6px 12px; border-radius: 8px; font-size: 13px;">
+                      <ion-icon name="calendar-outline" slot="start"></ion-icon> 
+                      {{ expenseFilterDate ? (expenseFilterDate | date:'mediumDate') : 'Select Date' }}
+                    </button>
+                    <ion-modal trigger="open-expense-date-picker" [initialBreakpoint]="0.6" [breakpoints]="[0, 0.6]">
+                      <ng-template>
+                        <ion-content class="modal-bg">
+                          <ion-datetime presentation="date" [(ngModel)]="expenseFilterDate" size="cover"></ion-datetime>
+                        </ion-content>
+                      </ng-template>
+                    </ion-modal>
+                    <ion-icon name="close-circle" style="cursor: pointer; color: #64748b; font-size: 18px;" *ngIf="expenseFilterDate" (click)="expenseFilterDate = ''" title="Clear Date"></ion-icon>
+                  </div>
+                </div>
+
+                <div *ngIf="getFilteredExpenses().length === 0" class="empty-state" style="padding: 20px;">
+                  <ion-icon name="receipt-outline"></ion-icon>
+                  <p>No expenses recorded for selected date.</p>
+                </div>
+
+                <div class="collection-logs">
+                  <div *ngFor="let exp of getFilteredExpenses()" class="col-log-card" style="border-left: 4px solid #e74c3c;">
+                    <div class="col-log-header">
+                      <span class="rcpt" style="color: white; font-weight: 700;">
+                        {{ exp.reason }}
+                        <ion-icon name="create-outline" style="cursor: pointer; color: #e74c3c; margin-left: 6px;" (click)="openEditExpenseModal(exp)"></ion-icon>
+                        <ion-icon name="trash-outline" style="cursor: pointer; color: #ff4d4f; margin-left: 6px;" (click)="onDeleteExpense(exp.uuid)"></ion-icon>
+                      </span>
+                      <span class="amt" style="color: #e74c3c;">₹{{ exp.amount }}</span>
+                    </div>
+                    <p class="meta" style="margin-top: 8px;">
+                      Added by: {{ exp.added_by_name }} • {{ exp.expense_date | date:'medium' }}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -922,6 +1182,101 @@
                 </div>
                 
                 <button type="submit" [disabled]="editCollectionForm.invalid" class="submit-modal-btn">
+                  Save Changes
+                </button>
+              </form>
+            </div>
+          </ion-content>
+        </ng-template>
+      </ion-modal>
+
+      <!-- Expense Modal -->
+      <ion-modal [isOpen]="isAddExpenseOpen" (didDismiss)="isAddExpenseOpen = false" class="glass-modal">
+        <ng-template>
+          <ion-header class="ion-no-border">
+            <ion-toolbar>
+              <ion-title>Record Daily Expense</ion-title>
+              <ion-buttons slot="end">
+                <ion-button (click)="isAddExpenseOpen = false" color="light">
+                  <ion-icon name="close-circle-outline"></ion-icon>
+                </ion-button>
+              </ion-buttons>
+            </ion-toolbar>
+          </ion-header>
+
+          <ion-content class="modal-bg">
+            <form [formGroup]="expenseForm" (ngSubmit)="onRecordExpense()" class="modal-form" style="padding: 20px;">
+              <div class="input-group">
+                <label>Amount (₹) *</label>
+                <input type="number" formControlName="amount" placeholder="E.g. 200" />
+              </div>
+              <div class="input-group">
+                <label>Reason *</label>
+                <input type="text" formControlName="reason" placeholder="E.g. Petrol, Food..." />
+              </div>
+              
+              <button type="submit" [disabled]="expenseForm.invalid" class="submit-modal-btn" style="background: #e74c3c;">
+                Log Expense
+              </button>
+            </form>
+          </ion-content>
+        </ng-template>
+      </ion-modal>
+
+      <!-- Expense Edit Modal -->
+      <ion-modal [isOpen]="isEditExpenseOpen" (didDismiss)="closeEditExpenseModal()" class="glass-modal">
+        <ng-template>
+          <ion-header class="ion-no-border">
+            <ion-toolbar style="--background: transparent;">
+              <ion-title style="color: #ffffff; font-weight: 700;">Edit Expense</ion-title>
+              <ion-buttons slot="end">
+                <ion-button (click)="closeEditExpenseModal()" style="color: #ffffff;">Close</ion-button>
+              </ion-buttons>
+            </ion-toolbar>
+          </ion-header>
+          <ion-content class="modal-bg">
+            <div style="padding: 20px;">
+              <form [formGroup]="editExpenseForm" (ngSubmit)="onUpdateExpense()" class="modal-form" style="display: flex; flex-direction: column; gap: 16px;">
+                <div class="input-group">
+                  <label>Amount (₹) *</label>
+                  <input type="number" formControlName="amount" />
+                </div>
+                <div class="input-group">
+                  <label>Reason *</label>
+                  <input type="text" formControlName="reason" />
+                </div>
+                <button type="submit" [disabled]="editExpenseForm.invalid" class="submit-modal-btn">
+                  Save Changes
+                </button>
+              </form>
+            </div>
+          </ion-content>
+        </ng-template>
+      </ion-modal>
+
+      <!-- Investment Edit Modal -->
+      <ion-modal [isOpen]="isEditInvestmentOpen" (didDismiss)="closeEditInvestmentModal()" class="glass-modal">
+        <ng-template>
+          <ion-header class="ion-no-border">
+            <ion-toolbar style="--background: transparent;">
+              <ion-title style="color: #ffffff; font-weight: 700;">Edit Investment</ion-title>
+              <ion-buttons slot="end">
+                <ion-button (click)="closeEditInvestmentModal()" style="color: #ffffff;">Close</ion-button>
+              </ion-buttons>
+            </ion-toolbar>
+          </ion-header>
+          <ion-content class="modal-bg">
+            <div style="padding: 20px;">
+              <form [formGroup]="editInvestmentForm" (ngSubmit)="onUpdateInvestment()" class="modal-form" style="display: flex; flex-direction: column; gap: 16px;">
+                <div class="input-group">
+                  <label>Amount (₹) *</label>
+                  <input type="number" formControlName="amount" />
+                </div>
+                <div class="input-group">
+                  <label>Source *</label>
+                  <input type="text" formControlName="source" />
+                </div>
+                <button type="submit" [disabled]="editInvestmentForm.invalid" class="submit-modal-btn">
                   Save Changes
                 </button>
               </form>

@@ -22,8 +22,13 @@ export class EmployeeDashboardPage implements OnInit {
   customers: any[] = [];
   loans: any[] = [];
   
-  activeTab: 'customers' | 'loans' | 'collection' | 'total-collections' = 'customers';
+  activeTab: 'dashboard' | 'customers' | 'loans' | 'collection' | 'total-collections' = 'dashboard';
   collectionFilterDate: string = '';
+
+  dashboardStats = { today_collection: 0, today_count: 0 };
+  
+  expenseForm!: FormGroup;
+  isAddExpenseOpen = false;
 
   loanForm!: FormGroup;
   
@@ -69,6 +74,61 @@ export class EmployeeDashboardPage implements OnInit {
     this.loadData();
   }
 
+  pollInterval: any;
+
+  ionViewWillEnter() {
+    // Check immediately
+    this.checkPermissions();
+    // Then poll every 3 seconds for true "immediate" UI updates
+    this.pollInterval = setInterval(() => {
+      this.checkPermissions();
+    }, 3000);
+    
+    this.loadData();
+  }
+
+  ionViewWillLeave() {
+    if (this.pollInterval) {
+      clearInterval(this.pollInterval);
+    }
+  }
+
+  private checkPermissions() {
+    this.apiService.getAuthMe().subscribe({
+      next: (user) => {
+        this.currentUser = user;
+        this.authService.updateUser(user);
+        
+        // If disabled, log them out immediately
+        if (user.status === 'disabled') {
+          if (this.pollInterval) clearInterval(this.pollInterval);
+          this.authService.logout();
+        }
+      },
+      error: () => {
+        if (this.pollInterval) clearInterval(this.pollInterval);
+        this.authService.logout();
+      }
+    });
+  }
+
+  doRefresh(event: any) {
+    this.apiService.getAuthMe().subscribe({
+      next: (user) => {
+        this.currentUser = user;
+        this.authService.updateUser(user);
+        if (user.status === 'disabled') {
+          this.authService.logout();
+        }
+      },
+      error: () => this.authService.logout()
+    });
+    this.loadData();
+    setTimeout(() => {
+      event.target.complete();
+    }, 1000);
+  }
+
   initForms() {
     this.loanForm = this.fb.group({
       customer_uuid: ['', [Validators.required]],
@@ -83,6 +143,11 @@ export class EmployeeDashboardPage implements OnInit {
       loan_uuid: ['', [Validators.required]],
       collected_amount: ['', [Validators.required, Validators.min(1)]],
       payment_type: ['Cash', [Validators.required]]
+    });
+
+    this.expenseForm = this.fb.group({
+      amount: ['', [Validators.required, Validators.min(1)]],
+      reason: ['', [Validators.required]]
     });
   }
 
@@ -172,9 +237,18 @@ export class EmployeeDashboardPage implements OnInit {
         this.collections = await this.dbService.getCollections();
       }
     });
+
+    this.loadDashboardStats();
   }
 
-  selectTab(tab: 'customers' | 'loans' | 'collection' | 'total-collections') {
+  loadDashboardStats() {
+    this.apiService.getDashboardStats().subscribe({
+      next: (res) => this.dashboardStats = res,
+      error: (err) => console.error('Error loading dashboard stats:', err)
+    });
+  }
+
+  selectTab(tab: 'dashboard' | 'customers' | 'loans' | 'collection' | 'total-collections') {
     this.activeTab = tab;
     this.menuCtrl.close();
   }
@@ -394,6 +468,7 @@ export class EmployeeDashboardPage implements OnInit {
           this.showToast('Payment recorded successfully', 'success');
           this.clearCollectionSelection();
           this.loadData();
+          this.loadDashboardStats();
         },
         error: async (err) => {
           loader.dismiss();
@@ -531,6 +606,34 @@ export class EmployeeDashboardPage implements OnInit {
     });
 
     doc.save(`Collections_${datePostfix}.pdf`);
+  }
+
+  openAddExpenseModal() {
+    this.expenseForm.reset();
+    this.isAddExpenseOpen = true;
+  }
+
+  async onRecordExpense() {
+    if (this.expenseForm.invalid) return;
+    
+    const loader = await this.loadingCtrl.create({
+      message: 'Recording expense...',
+      spinner: 'crescent'
+    });
+    await loader.present();
+
+    this.apiService.addExpense(this.expenseForm.value).subscribe({
+      next: async () => {
+        loader.dismiss();
+        this.isAddExpenseOpen = false;
+        this.showToast('Expense recorded successfully', 'success');
+        this.loadDashboardStats();
+      },
+      error: async (err) => {
+        loader.dismiss();
+        this.showToast(err?.error?.error || 'Failed to record expense', 'danger');
+      }
+    });
   }
 
   async logout() {
