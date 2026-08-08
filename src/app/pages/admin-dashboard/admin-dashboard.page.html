@@ -55,14 +55,23 @@
           <ion-label>Expenses</ion-label>
         </ion-item>
 
+        <ion-item button (click)="selectTab('withdrawals')" [class.active-item]="activeTab === 'withdrawals'" class="menu-item">
+          <ion-icon name="cash-outline" slot="start"></ion-icon>
+          <ion-label>Withdrawals</ion-label>
+        </ion-item>
+
         <ion-item button (click)="selectTab('cashbook')" [class.active-item]="activeTab === 'cashbook'" class="menu-item">
           <ion-icon name="book-outline" slot="start"></ion-icon>
           <ion-label>Cash Book (B/F)</ion-label>
         </ion-item>
+        <ion-item button (click)="selectTab('defaulters')" [class.active-item]="activeTab === 'defaulters'" class="menu-item">
+          <ion-icon name="warning-outline" slot="start"></ion-icon>
+          <ion-label>Defaulters</ion-label>
+        </ion-item>
 
         <ion-item button (click)="selectTab('reports')" [class.active-item]="activeTab === 'reports'" class="menu-item">
-          <ion-icon name="analytics-outline" slot="start"></ion-icon>
-          <ion-label>Reports</ion-label>
+          <ion-icon name="stats-chart-outline" slot="start"></ion-icon>
+          <ion-label>Reports & Analytics</ion-label>
         </ion-item>
       </ion-list>
     </ion-content>
@@ -79,13 +88,13 @@
         </ion-buttons>
         <ion-title style="background: linear-gradient(135deg, #1e3a8a, #3b82f6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 800; font-size: 22px; padding-left: 8px;">Welcome back, {{ currentUser?.name || 'Admin' }}</ion-title>
         <ion-buttons slot="end">
-          <button id="profile-popover-trigger" style="background: transparent; border: none; padding: 0; margin-right: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; outline: none; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+          <button id="admin-profile-trigger" style="background: transparent; border: none; padding: 0; margin-right: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; outline: none; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
             <div style="width: 42px; height: 42px; border-radius: 50%; background: linear-gradient(135deg, #1e3a8a, #3b82f6); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(30, 58, 138, 0.2); color: white; font-weight: 700; font-size: 18px; border: 2.5px solid white;">
               {{ (currentUser?.name || 'A')[0] | uppercase }}
             </div>
           </button>
           
-          <ion-popover trigger="profile-popover-trigger" dismissOnSelect="true" alignment="end">
+          <ion-popover trigger="admin-profile-trigger" dismissOnSelect="true" alignment="end">
             <ng-template>
               <ion-content>
                 <div style="padding: 16px; min-width: 240px;">
@@ -116,30 +125,40 @@
       </ion-refresher>
 
       <div class="header-banner">
-        <h2>{{ activeTab | uppercase }}</h2>
-        <p>Admin Dashboard Overview</p>
+        <h2>{{ activeTab.replace('-', ' ').replace('-', ' ') | uppercase }}</h2>
       </div>
 
       <div class="content-container">
 
-        <!-- TAB: DASHBOARD -->
         <div *ngIf="activeTab === 'dashboard'" class="tab-content">
           <div class="section-card glass-panel" style="margin-bottom: 20px;">
-            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-              <h3>Admin Overview</h3>
-              <button class="action-btn" (click)="toggleEditLayout()" [ngStyle]="{'background': isEditingLayout ? 'rgba(59, 130, 246, 0.15)' : 'rgba(107, 114, 128, 0.15)', 'color': isEditingLayout ? '#3b82f6' : '#6b7280'}">
-                <ion-icon [name]="isEditingLayout ? 'checkmark-circle-outline' : 'options-outline'" slot="start"></ion-icon> 
-                {{ isEditingLayout ? 'Done Editing' : 'Edit Layout' }}
-              </button>
+            <div class="card-header" style="display: flex; justify-content: flex-end; align-items: center;">
+              <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                <select [(ngModel)]="dashboardFilterRange" (change)="loadDashboardStats()" style="padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.8); background: rgba(255,255,255,0.7); color: #1e293b; font-size: 14px; outline: none; cursor: pointer; font-weight: 600;">
+                  <option value="today">Today</option>
+                  <option value="week">Last 7 Days</option>
+                  <option value="month">This Month</option>
+                  <option value="all">All Time</option>
+                </select>
+                <button class="action-btn" (click)="toggleEditLayout()" [ngStyle]="{'background': isEditingLayout ? 'rgba(59, 130, 246, 0.15)' : 'rgba(107, 114, 128, 0.15)', 'color': isEditingLayout ? '#3b82f6' : '#6b7280'}">
+                  <ion-icon [name]="isEditingLayout ? 'checkmark-circle-outline' : 'options-outline'" slot="start"></ion-icon> 
+                  {{ isEditingLayout ? 'Done Editing' : 'Edit Layout' }}
+                </button>
+              </div>
             </div>
             
             <div cdkDropList cdkDropListOrientation="mixed" (cdkDropListDropped)="dropMetric($event)" class="metrics-grid" style="display: flex; flex-wrap: wrap; gap: 12px; padding: 16px;">
               
-              <div *ngFor="let metric of metricsConfig; trackBy: trackByMetricId" cdkDrag [cdkDragDisabled]="!isEditingLayout" class="metric-card" [ngClass]="{'is-draggable': isEditingLayout}" [ngStyle]="{'background': metric.color + '1a', 'border': '1px solid ' + metric.color + '33', 'padding': '16px', 'border-radius': '12px', 'display': 'flex', 'flex-direction': 'column', 'justify-content': 'center', 'position': 'relative', 'flex': metric.size === 'full' ? '0 0 100%' : '0 0 calc(50% - 6px)', 'width': metric.size === 'full' ? '100%' : 'calc(50% - 6px)', 'aspect-ratio': metric.size === 'full' ? 'auto' : '1/1', 'min-height': metric.size === 'full' ? '120px' : 'auto'}">
+              <div *ngFor="let metric of metricsConfig; trackBy: trackByMetricId" cdkDrag [cdkDragDisabled]="!isEditingLayout" class="metric-card glass-metric-card" [ngClass]="{'is-draggable': isEditingLayout}" [ngStyle]="{'background': metric.color + '1a', 'border': '1px solid #3b82f6', 'padding': '16px', 'border-radius': '12px', 'display': metric.hidden && !isEditingLayout ? 'none' : 'flex', 'flex-direction': 'column', 'justify-content': 'center', 'position': 'relative', 'flex': metric.size === 'full' ? '0 0 100%' : '0 0 calc(50% - 6px)', 'width': metric.size === 'full' ? '100%' : 'calc(50% - 6px)', 'aspect-ratio': metric.size === 'full' ? 'auto' : '1/1', 'min-height': metric.size === 'full' ? '120px' : 'auto', 'opacity': metric.hidden && isEditingLayout ? '0.4' : '1'}">
                 
                 <!-- Toggle Size Button -->
                 <div *ngIf="isEditingLayout" (click)="toggleMetricSize(metric.id); $event.stopPropagation()" class="resize-handle" style="position: absolute; top: 8px; left: 8px; cursor: pointer; color: {{metric.color}}; opacity: 0.7; z-index: 10; padding: 4px;">
                   <ion-icon [name]="metric.size === 'full' ? 'contract-outline' : 'expand-outline'" style="font-size: 18px;"></ion-icon>
+                </div>
+
+                <!-- Toggle Visibility Button -->
+                <div *ngIf="isEditingLayout" (click)="toggleMetricVisibility(metric.id); $event.stopPropagation()" style="position: absolute; bottom: 8px; right: 8px; cursor: pointer; color: {{metric.color}}; opacity: 0.7; z-index: 10; padding: 4px;">
+                  <ion-icon [name]="metric.hidden ? 'eye-off-outline' : 'eye-outline'" style="font-size: 20px;"></ion-icon>
                 </div>
 
                 <div [style.visibility]="isEditingLayout ? 'visible' : 'hidden'" class="drag-handle" style="position: absolute; top: 8px; right: 8px; cursor: grab; color: {{metric.color}}; opacity: 0.7; z-index: 10; padding: 4px;">
@@ -151,6 +170,116 @@
                 <h2 style="margin: 8px 0 0 0; color: #1e293b; font-size: 24px; font-weight: 700;">₹{{ dashboardStats[metric.key] | number:'1.0-0' }}</h2>
               </div>
               
+            </div>
+          </div>
+        </div>
+
+        
+
+
+
+        <!-- TAB: DEFAULTERS -->
+        <div *ngIf="activeTab === 'defaulters'" class="tab-content fade-in" style="padding: 10px;">
+          
+          <!-- Filter Header -->
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.8); padding: 12px 16px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.02);">
+            <h3 style="margin: 0; color: #1e293b; font-weight: 800; font-size: 18px; display: flex; align-items: center; gap: 8px;">
+              <ion-icon name="alert-circle" style="color: #ef4444; font-size: 22px;"></ion-icon> Defaulters
+            </h3>
+            
+            <div style="display: flex; align-items: center; gap: 6px; background: rgba(0, 0, 0, 0.03); border: 1px solid rgba(0, 0, 0, 0.05); padding: 4px 12px; border-radius: 50px;">
+              <ion-icon name="filter" style="color: #64748b; font-size: 14px;"></ion-icon>
+              <span style="font-weight: 600; color: #475569; font-size: 12px;">Overdue ></span>
+              <input type="number" [(ngModel)]="defaultersDaysThreshold" style="width: 25px; border: none; background: transparent; font-weight: 800; color: #ef4444; font-size: 14px; text-align: center; outline: none; padding: 0;" min="0">
+              <span style="font-weight: 600; color: #475569; font-size: 12px;">days</span>
+            </div>
+          </div>
+          
+          <div *ngIf="getDefaulters().length === 0" class="empty-state" style="padding: 40px; text-align: center;">
+            <div style="background: rgba(16, 185, 129, 0.1); width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
+              <ion-icon name="shield-checkmark" style="font-size: 40px; color: #10b981;"></ion-icon>
+            </div>
+            <h3 style="color: #10b981; margin: 0 0 8px;">All Good!</h3>
+            <p style="color: #64748b; margin: 0;">No customers are overdue for more than <strong style="color: #334155;">{{ defaultersDaysThreshold }}</strong> days.</p>
+          </div>
+          
+          <div *ngIf="getDefaulters().length > 0" class="transaction-list">
+            <div *ngFor="let loan of getDefaulters()" class="transaction-item" style="background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.8); padding: 14px; border-radius: 16px; margin-bottom: 12px; display: flex; align-items: center; gap: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
+              
+              <!-- Avatar -->
+              <div style="flex-shrink: 0; width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, #ef4444, #f87171); color: white; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3);">
+                {{ loan.customer_name[0] | uppercase }}
+              </div>
+            
+              <!-- Info -->
+              <div style="flex-grow: 1; min-width: 0;"> <!-- min-width 0 fixes overflow text-overflow issues -->
+                <h4 style="margin: 0 0 2px 0; color: #1e293b; font-weight: 700; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ loan.customer_name }}</h4>
+                <p style="margin: 0 0 2px 0; font-size: 12px; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                  Acc: <strong style="color: #334155;">{{ loan.accno }}</strong>
+                </p>
+                <p style="margin: 0; font-size: 11px; color: #94a3b8;">
+                  Last Paid: <strong style="color: #64748b;">{{ loan.last_paid_date ? (loan.last_paid_date | date:'mediumDate') : 'Never' }}</strong>
+                </p>
+              </div>
+            
+              <!-- Amount and Action -->
+              <div style="flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; justify-content: space-between; height: 100%; gap: 8px;">
+                <div style="text-align: right; background: rgba(239, 68, 68, 0.05); padding: 2px 8px; border-radius: 8px;">
+                  <h3 style="margin: 0; color: #ef4444; font-weight: 800; font-size: 15px;">₹{{ loan.total_repayable - loan.interest_amount }}</h3>
+                </div>
+                
+                <a [href]="'tel:' + (loan.customer_mobile || loan.customer_phone)" style="text-decoration: none;">
+                  <div style="background: linear-gradient(135deg, #10b981, #34d399); color: white; padding: 6px 14px; border-radius: 50px; display: flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 800; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.2);">
+                    <ion-icon name="call" style="font-size: 14px;"></ion-icon> CALL
+                  </div>
+                </a>
+              </div>
+            
+            </div>
+          </div>
+        </div>
+<!-- TAB: REPORTS -->
+        <div *ngIf="activeTab === 'reports'" class="tab-content">
+          <div class="section-card glass-panel" style="margin-bottom: 20px;">
+            <div class="card-header">
+              <h3>Analytics & Reports</h3>
+            </div>
+            <div style="padding: 16px; display: flex; flex-direction: column; gap: 24px;">
+              
+              <!-- 30-Day Collections Trend -->
+              <div class="chart-container" style="background: rgba(255,255,255,0.6); padding: 16px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.8); box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
+                <h4 style="margin: 0 0 16px 0; color: #1e293b; font-weight: 700; font-size: 16px;">30-Day Collections Trend</h4>
+                <div style="position: relative; height: 300px; width: 100%;">
+                  <canvas id="collectionsTrendChart"></canvas>
+                </div>
+              </div>
+
+              <div style="display: flex; gap: 24px; flex-wrap: wrap;">
+                <!-- Loan Disbursed vs Collection -->
+                <div class="chart-container" style="flex: 1; min-width: 300px; background: rgba(255,255,255,0.6); padding: 16px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.8); box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
+                  <h4 style="margin: 0 0 16px 0; color: #1e293b; font-weight: 700; font-size: 16px; text-align: center;">Loan Disbursed vs Collection</h4>
+                  <div style="position: relative; height: 250px; width: 100%;">
+                    <canvas id="incomeExpenseChart"></canvas>
+                  </div>
+                </div>
+
+                <!-- Loan Status Distribution -->
+                <div class="chart-container" style="flex: 1; min-width: 300px; background: rgba(255,255,255,0.6); padding: 16px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.8); box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
+                  <h4 style="margin: 0 0 16px 0; color: #1e293b; font-weight: 700; font-size: 16px; text-align: center;">Loan Status Distribution</h4>
+                  <div style="position: relative; height: 250px; width: 100%;">
+                    <canvas id="loanStatusChart"></canvas>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Employee Analytics -->
+              <div class="chart-container" style="background: rgba(255,255,255,0.6); padding: 16px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.8); box-shadow: 0 4px 15px rgba(0,0,0,0.03); margin-top: 24px;">
+                <h4 style="margin: 0 0 16px 0; color: #1e293b; font-weight: 700; font-size: 16px;">Employee Performance</h4>
+                <div style="position: relative; height: 300px; width: 100%;">
+                  <canvas id="employeePerformanceChart"></canvas>
+                </div>
+              </div>
+
             </div>
           </div>
         </div>
@@ -191,6 +320,7 @@
                     <span class="badge" [class.granted]="emp.can_disburse_loans">Disburse</span>
                     <span class="badge" [class.granted]="emp.can_collect_payments">Collect</span>
                     <span class="badge" [class.granted]="emp.can_view_reports">Reports</span>
+                    <span class="badge" [class.granted]="emp.can_view_defaulters">Defaulters</span>
                   </div>
                 </div>
 
@@ -242,7 +372,7 @@
                 <p>No customers found.</p>
               </div>
 
-              <div *ngFor="let cust of getFilteredCustomers()" class="customer-card" style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: nowrap;">
+              <div *ngFor="let cust of getFilteredCustomers() | slice:0:customersDisplayLimit" class="customer-card" style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: nowrap;">
                 <div style="display: flex; gap: 12px; align-items: center; flex: 1; min-width: 0;">
                   <div class="avatar-circle">
                     {{ cust.name.charAt(0).toUpperCase() }}
@@ -262,6 +392,9 @@
                   </button>
                 </div>
               </div>
+              <ion-infinite-scroll (ionInfinite)="loadMore($event, 'customers')">
+                <ion-infinite-scroll-content></ion-infinite-scroll-content>
+              </ion-infinite-scroll>
             </div>
           </div>
         </div>
@@ -323,7 +456,7 @@
                 <div *ngIf="getActiveLoansList().length === 0" class="empty-state">
                   <p>No active loans found.</p>
                 </div>
-                <div *ngFor="let loan of getActiveLoansList()" 
+                <div *ngFor="let loan of getActiveLoansList() | slice:0:loansDisplayLimit" 
                      [id]="'loan-card-' + loan.uuid" 
                      class="loan-card" 
                      [class.highlighted-card]="highlightedLoanUuid === loan.uuid"
@@ -365,6 +498,9 @@
                     </div>
                   </div>
                 </div>
+                <ion-infinite-scroll (ionInfinite)="loadMore($event, 'loans')">
+                  <ion-infinite-scroll-content></ion-infinite-scroll-content>
+                </ion-infinite-scroll>
               </div>
 
               <!-- Cleared Loans Section -->
@@ -372,7 +508,7 @@
                 <div *ngIf="getClosedLoansList().length === 0" class="empty-state">
                   <p>No cleared loans yet.</p>
                 </div>
-                <div *ngFor="let loan of getClosedLoansList()" 
+                <div *ngFor="let loan of getClosedLoansList() | slice:0:loansDisplayLimit" 
                      [id]="'loan-card-' + loan.uuid" 
                      class="loan-card loan-cleared" 
                      [class.highlighted-card]="highlightedLoanUuid === loan.uuid"
@@ -488,7 +624,7 @@
               </div>
 
               <div class="collection-logs">
-                <div *ngFor="let col of getTodayCollections()" class="col-log-card">
+                <div *ngFor="let col of getTodayCollections() | slice:0:todayCollectionsDisplayLimit" class="col-log-card">
                   <div class="col-log-header">
                     <span class="rcpt">
                       {{ col.receipt_no || 'Pending Sync' }}
@@ -517,6 +653,9 @@
                   </p>
                 </div>
               </div>
+              <ion-infinite-scroll (ionInfinite)="loadMore($event, 'todayCollections')">
+                <ion-infinite-scroll-content></ion-infinite-scroll-content>
+              </ion-infinite-scroll>
             </div>
           </div>
         </div>
@@ -549,10 +688,18 @@
               </div>
             </div>
             
+            <!-- Overall Total Card -->
+            <div *ngIf="getAllCollectionsSorted().length > 0" style="padding: 16px; display: flex; justify-content: center; width: 100%;">
+              <div style="background: rgba(255, 255, 255, 0.75); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.5); padding: 20px 40px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05); text-align: center;">
+                <p style="margin: 0 0 8px 0; font-size: 14px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1px;">Overall Total Collected</p>
+                <h3 style="margin: 0; font-size: 36px; font-weight: 800; background: linear-gradient(135deg, #10b981, #059669); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">₹{{ getTotalFilteredCollectionAmount() }}</h3>
+              </div>
+            </div>
+
             <!-- Employee Summary Card -->
             <div *ngIf="getAllCollectionsSorted().length > 0" class="summary-cards-container" style="display: flex; gap: 12px; overflow-x: auto; padding: 16px; background: rgba(255,255,255,0.6); box-shadow: inset 0 2px 4px rgba(0,0,0,0.02); border-bottom: 1px solid rgba(255,255,255,0.05); margin-bottom: 16px;">
               <div *ngFor="let sum of getEmployeeCollectionSummary()" style="background: rgba(255, 255, 255, 0.6); padding: 12px 16px; border-radius: 12px; min-width: 170px; border: 1px solid rgba(255, 255, 255, 0.8);">
-                <p style="margin: 0 0 4px 0; font-size: 13px; color: #94a3b8; font-weight: 600; text-transform: uppercase;">{{ sum.name }}</p>
+                <p style="margin: 0 0 4px 0; font-size: 13px; color: #94a3b8; font-weight: 600; text-transform: uppercase;">{{ sum.name }} <span style="text-transform: none; font-size: 11px; opacity: 0.8;">({{ sum.count }} Customers)</span></p>
                 <h4 style="margin: 0; color: #10b981; font-size: 18px;">₹{{ sum.total }}</h4>
                 <div style="margin-top: 6px; padding-top: 6px; border-top: 1px dashed rgba(0,0,0,0.05); display: flex; justify-content: space-between; font-size: 11px; font-weight: 600; color: #64748b;">
                   <span>Cash: <span style="color: #10b981;">₹{{ sum.cashTotal }}</span></span>
@@ -567,7 +714,7 @@
                 <p>No collections recorded yet.</p>
               </div>
 
-              <div *ngFor="let col of getAllCollectionsSorted()" class="col-log-card">
+              <div *ngFor="let col of getAllCollectionsSorted() | slice:0:totalCollectionsDisplayLimit" class="col-log-card">
                 <div class="col-log-header">
                   <span class="rcpt">
                     {{ col.receipt_no || 'Pending Sync' }}
@@ -594,6 +741,40 @@
                     {{ col.sync_status }}
                   </span>
                 </p>
+              </div>
+              <ion-infinite-scroll (ionInfinite)="loadMore($event, 'totalCollections')">
+                <ion-infinite-scroll-content></ion-infinite-scroll-content>
+              </ion-infinite-scroll>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB: WITHDRAWALS -->
+        <div *ngIf="activeTab === 'withdrawals'" class="tab-content">
+          <div class="section-card glass-panel">
+            <div class="card-header" style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: flex-end;">
+              <button class="action-btn-green" (click)="isWithdrawalModalOpen = true" style="background: #ef4444; border-color: #ef4444; color: white;">
+                <ion-icon name="cash-outline" slot="start"></ion-icon> Withdraw Profit
+              </button>
+            </div>
+            
+            <div class="collection-logs" style="max-width: 800px; margin: 0 auto; padding-top: 16px;">
+              <div *ngIf="withdrawals.length === 0" class="empty-state" style="padding: 40px;">
+                <ion-icon name="cash-outline"></ion-icon>
+                <p>No withdrawals recorded yet.</p>
+              </div>
+
+              <div *ngFor="let with of withdrawals" class="col-log-card" style="border-left: 4px solid #ef4444;">
+                <div class="col-log-header">
+                  <span class="rcpt">{{ with.reason }}</span>
+                  <span class="date">{{ with.created_at | date:'short' }}</span>
+                </div>
+                <div class="col-log-body" style="display: flex; justify-content: space-between; align-items: center;">
+                  <span class="amount" style="color: #ef4444; font-size: 20px; font-weight: 800;">-₹{{ with.amount }}</span>
+                  <ion-button fill="clear" color="danger" (click)="onDeleteWithdrawal(with.uuid)">
+                    <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
+                  </ion-button>
+                </div>
               </div>
             </div>
           </div>
@@ -665,7 +846,7 @@
                   
                   <p class="meta" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                     <span *ngIf="tx.type === 'collection'">Collected by: {{ tx.collected_by_name }}</span>
-                    <span *ngIf="tx.type !== 'collection'">Added by: Admin</span>
+                    <span *ngIf="tx.type !== 'collection'">Added by: {{ tx.added_by_name || 'Admin' }}</span>
                     <span style="color: #cbd5e1;">•</span>
                     <span><ion-icon name="time-outline" style="vertical-align: middle; margin-right: 4px;"></ion-icon>{{ tx.tx_date | date:'shortTime' }}</span>
                   </p>
@@ -842,6 +1023,11 @@
                   <ion-checkbox formControlName="can_view_total_collections"></ion-checkbox>
                   <ion-label>Can view total collections (Read-Only)</ion-label>
                 </div>
+
+                <div class="checkbox-item">
+                  <ion-checkbox formControlName="can_view_defaulters"></ion-checkbox>
+                  <ion-label>Can view defaulters section</ion-label>
+                </div>
               </div>
 
               <button type="submit" [disabled]="employeeForm.invalid" class="submit-modal-btn">
@@ -887,6 +1073,11 @@
                 <div class="checkbox-item">
                   <ion-checkbox formControlName="can_view_total_collections"></ion-checkbox>
                   <ion-label>Authorized to view total collections (Read-Only)</ion-label>
+                </div>
+
+                <div class="checkbox-item">
+                  <ion-checkbox formControlName="can_view_defaulters"></ion-checkbox>
+                  <ion-label>Authorized to view defaulters section</ion-label>
                 </div>
               </div>
 
@@ -1643,6 +1834,44 @@
         </ng-template>
       </ion-modal>
 
+      <!-- ADD WITHDRAWAL MODAL -->
+      <ion-modal [isOpen]="isWithdrawalModalOpen" (didDismiss)="isWithdrawalModalOpen = false" [initialBreakpoint]="0.75" [breakpoints]="[0, 0.75, 1]">
+        <ng-template>
+          <ion-content class="modal-bg">
+            <div class="modal-header-banner" style="background: linear-gradient(135deg, #ef4444, #dc2626); color: white; padding: 24px; border-bottom-left-radius: 24px; border-bottom-right-radius: 24px; display: flex; justify-content: space-between; align-items: flex-start; box-shadow: 0 10px 25px rgba(239, 68, 68, 0.2);">
+              <div>
+                <h2 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 800;">Withdraw Profit</h2>
+                <p style="margin: 0; font-size: 14px; opacity: 0.9;">Take profit out of the business cashbook</p>
+              </div>
+              <ion-button fill="clear" (click)="isWithdrawalModalOpen = false" style="--color: white; margin: -10px -10px 0 0;">
+                <ion-icon name="close-circle" style="font-size: 28px;"></ion-icon>
+              </ion-button>
+            </div>
+            
+            <div style="padding: 24px;">
+              <form [formGroup]="withdrawalForm" (ngSubmit)="recordWithdrawal()">
+                
+                <div class="input-group" style="margin-bottom: 20px;">
+                  <label style="color: #475569; font-weight: 600; margin-bottom: 6px; display: block;">Amount (₹) *</label>
+                  <div style="position: relative;">
+                    <span style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); font-weight: 700; color: #1e293b; font-size: 18px;">₹</span>
+                    <input type="number" formControlName="amount" placeholder="e.g. 50000" style="width: 100%; padding: 16px 16px 16px 40px; border-radius: 12px; border: 1px solid rgba(0, 0, 0, 0.1); background: #f8fafc; font-size: 18px; font-weight: 700; color: #1e293b; outline: none;" />
+                  </div>
+                </div>
+
+                <div class="input-group" style="margin-bottom: 24px;">
+                  <label style="color: #475569; font-weight: 600; margin-bottom: 6px; display: block;">Reason / Description *</label>
+                  <input type="text" formControlName="reason" placeholder="e.g. Partner Distribution" style="width: 100%; padding: 14px 16px; border-radius: 12px; border: 1px solid rgba(0, 0, 0, 0.1); background: #f8fafc; font-size: 15px; color: #1e293b; outline: none;" />
+                </div>
+                
+                <button type="submit" [disabled]="withdrawalForm.invalid" class="submit-modal-btn" style="width: 100%; padding: 16px; border-radius: 12px; background: linear-gradient(135deg, #ef4444, #dc2626); color: white; font-size: 16px; font-weight: 700; border: none; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3); transition: transform 0.2s;">
+                  <ion-icon name="arrow-down-circle-outline" style="vertical-align: middle; margin-right: 4px; font-size: 20px;"></ion-icon> Confirm Withdrawal
+                </button>
+              </form>
+            </div>
+          </ion-content>
+        </ng-template>
+      </ion-modal>
 
     </ion-content>
   </div>

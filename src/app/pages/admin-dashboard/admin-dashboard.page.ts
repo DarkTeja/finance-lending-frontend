@@ -5,13 +5,15 @@ import { IonicModule, ToastController, LoadingController, AlertController, MenuC
 import { RouterModule } from '@angular/router';
 import { Geolocation } from '@capacitor/geolocation';
 import { ApiService } from '../../services/api.service';
-import { AuthService } from '../../services/auth.service';
 import { DbService } from '../../services/db.service';
 import { SyncService } from '../../services/sync.service';
+import { AuthService } from '../../services/auth.service';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { DragDropModule, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
+import { Chart, registerables } from 'chart.js';
 
+Chart.register(...registerables);
 @Component({
   selector: 'app-admin-dashboard',
   templateUrl: './admin-dashboard.page.html',
@@ -25,7 +27,7 @@ export class AdminDashboardPage implements OnInit {
   customers: any[] = [];
   loans: any[] = [];
   
-  activeTab: 'dashboard' | 'users' | 'customers' | 'loans' | 'collection' | 'total-collections' | 'reports' | 'investments' | 'expenses' | 'cashbook' = 'dashboard';
+  activeTab: 'dashboard' | 'users' | 'customers' | 'loans' | 'collection' | 'total-collections' | 'reports' | 'investments' | 'expenses' | 'withdrawals' | 'cashbook' | 'defaulters' = 'dashboard';
 
   isProfileMenuOpen = false;
   investments: any[] = [];
@@ -44,18 +46,24 @@ export class AdminDashboardPage implements OnInit {
     total_investments: 0,
     total_expenses: 0,
     customer_count: 0,
-    employee_count: 0
+    employee_count: 0,
+    all_time_turnover: 0,
+    total_loans_given: 0,
+    total_collections_all_time: 0
   };
 
   isEditingLayout = false;
   metricsConfig = [
-    { id: 'today', title: 'Today\'s Collection', color: '#10b981', key: 'today_collection', size: 'half' },
-    { id: 'bfc', title: 'Cash In Hand', color: '#f59e0b', key: 'bf_cash', size: 'half' },
-    { id: 'rec', title: 'Pending Amount', color: '#ef4444', key: 'receivable_amount', size: 'half' },
-    { id: 'pen', title: 'Penalties', color: '#8b5cf6', key: 'extra_amount', size: 'half' },
-    { id: 'int', title: 'Interest Earned', color: '#3b82f6', key: 'interests', size: 'half' },
-    { id: 'inv', title: 'Total Invested', color: '#ec4899', key: 'total_investments', size: 'half' },
-    { id: 'exp', title: 'Total Expenses', color: '#e74c3c', key: 'total_expenses', size: 'half' }
+    { id: 'today', title: 'Today\'s Collection', color: '#10b981', key: 'today_collection', size: 'half', hidden: false },
+    { id: 'bfc', title: 'Cash In Hand', color: '#f59e0b', key: 'bf_cash', size: 'half', hidden: false },
+    { id: 'rec', title: 'Pending Amount', color: '#ef4444', key: 'receivable_amount', size: 'half', hidden: false },
+    { id: 'pen', title: 'Penalties', color: '#8b5cf6', key: 'extra_amount', size: 'half', hidden: false },
+    { id: 'int', title: 'Interest Earned', color: '#3b82f6', key: 'interests', size: 'half', hidden: false },
+    { id: 'inv', title: 'Total Invested', color: '#ec4899', key: 'total_investments', size: 'half', hidden: false },
+    { id: 'exp', title: 'Total Expenses', color: '#e74c3c', key: 'total_expenses', size: 'half', hidden: false },
+    { id: 'dis', title: 'Total Disbursed', color: '#14b8a6', key: 'total_loans_given', size: 'half', hidden: false },
+    { id: 'col', title: 'Total Collected', color: '#8b5cf6', key: 'total_collections_all_time', size: 'half', hidden: false },
+    { id: 'turn', title: 'Turnover (Disbursed + Collected)', color: '#06b6d4', key: 'all_time_turnover', size: 'half', hidden: false }
   ];
   
   expenseForm!: FormGroup;
@@ -64,12 +72,71 @@ export class AdminDashboardPage implements OnInit {
   isAddInvestmentOpen = false;
   isEditExpenseOpen = false;
   selectedExpenseForEdit: any = null;
+  isChangeMyPasswordOpen = false;
+
+  // Withdrawals
+  withdrawals: any[] = [];
+  isWithdrawalModalOpen = false;
+  withdrawalForm: FormGroup;
+  dashboardFilterRange: string = 'all';
+
+
   getLocalISODate(): string {
     const tzOffset = (new Date()).getTimezoneOffset() * 60000;
     return new Date(Date.now() - tzOffset).toISOString().split('T')[0];
   }
 
+  defaultersDaysThreshold = 5;
+  getDefaulters() {
+    const now = new Date();
+    return this.loans.filter(loan => {
+      if (loan.status !== 'active') return false;
+      
+      const loanCollections = this.collections.filter(c => c.loan_uuid === loan.uuid);
+      let lastDate: Date;
+      
+      if (loanCollections.length > 0) {
+        // Find most recent collection
+        loanCollections.sort((a, b) => new Date(b.collection_date).getTime() - new Date(a.collection_date).getTime());
+        lastDate = new Date(loanCollections[0].collection_date);
+        loan.last_paid_date = loanCollections[0].collection_date; // for display
+      } else {
+        lastDate = new Date(loan.created_at);
+        loan.last_paid_date = null;
+      }
+      
+      const diffTime = Math.abs(now.getTime() - lastDate.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      // If it's more than threshold days ago, they are a defaulter
+      return diffDays > this.defaultersDaysThreshold;
+    });
+  }
+
   expenseFilterDate: string = this.getLocalISODate();
+
+  // Lazy loading limits
+  customersDisplayLimit = 20;
+  loansDisplayLimit = 20;
+  todayCollectionsDisplayLimit = 20;
+  totalCollectionsDisplayLimit = 20;
+
+  loadMore(event: any, listType: 'customers' | 'loans' | 'todayCollections' | 'totalCollections') {
+    if (listType === 'customers') {
+      this.customersDisplayLimit += 20;
+    } else if (listType === 'loans') {
+      this.loansDisplayLimit += 20;
+    } else if (listType === 'todayCollections') {
+      this.todayCollectionsDisplayLimit += 20;
+    } else if (listType === 'totalCollections') {
+      this.totalCollectionsDisplayLimit += 20;
+    }
+    
+    // Complete the infinite scroll event
+    if (event && event.target) {
+      event.target.complete();
+    }
+  }
 
   // Cashbook / Ledger variables
   cashbookDate: string = this.getLocalISODate();
@@ -93,7 +160,6 @@ export class AdminDashboardPage implements OnInit {
   isAddLoanOpen = false;
   isEditLoanOpen = false;
   isAccountsGridOpen = false;
-  isChangeMyPasswordOpen = false;
   isResetEmployeePasswordOpen = false;
 
   changeMyPasswordForm!: FormGroup;
@@ -135,14 +201,19 @@ export class AdminDashboardPage implements OnInit {
   constructor(
     private fb: FormBuilder,
     private apiService: ApiService,
+    public dbService: DbService,
+    public syncService: SyncService,
     private authService: AuthService,
-    private dbService: DbService,
-    private syncService: SyncService,
     private toastCtrl: ToastController,
     private loadingCtrl: LoadingController,
     private alertCtrl: AlertController,
     private menuCtrl: MenuController
-  ) {}
+  ) {
+    this.withdrawalForm = this.fb.group({
+      amount: ['', [Validators.required, Validators.min(1)]],
+      reason: ['', Validators.required]
+    });
+  }
 
   ngOnInit() {
     this.currentUser = this.authService.getCurrentUser();
@@ -156,7 +227,7 @@ export class AdminDashboardPage implements OnInit {
         const order = JSON.parse(savedLayout);
         this.metricsConfig.sort((a, b) => {
           const idxA = order.indexOf(a.id);
-          const idxB = order.indexOf(b.id);
+          const idxB = order.indexOf(999);
           return (idxA !== -1 ? idxA : 999) - (idxB !== -1 ? idxB : 999);
         });
       } catch (e) {
@@ -177,16 +248,36 @@ export class AdminDashboardPage implements OnInit {
         console.error('Error loading dashboard sizes', e);
       }
     }
+
+    const savedHiddenStr = localStorage.getItem('adminDashboardMetricsHidden');
+    if (savedHiddenStr) {
+      try {
+        const savedHidden = JSON.parse(savedHiddenStr);
+        this.metricsConfig.forEach(metric => {
+          if (savedHidden[metric.id]) {
+            metric.hidden = true;
+          }
+        });
+      } catch (e) {
+        console.error('Error loading dashboard hidden state', e);
+      }
+    }
   }
 
   ionViewWillEnter() {
     this.loadData();
+    this.loadWithdrawals();
+  }
+
+  loadWithdrawals() {
+    this.apiService.getWithdrawals().subscribe({
+      next: (res) => this.withdrawals = res,
+      error: (err) => console.error('Error loading withdrawals:', err)
+    });
   }
 
   doRefresh(event: any) {
     this.loadData();
-    // In a real app, you might want to wait for loadData observables to complete,
-    // but for now we can just finish the refresher after 1 second.
     setTimeout(() => {
       event.target.complete();
     }, 1000);
@@ -201,7 +292,6 @@ export class AdminDashboardPage implements OnInit {
     if (metric) {
       metric.size = metric.size === 'full' ? 'half' : 'full';
       
-      // Save sizes
       const sizes: any = {};
       this.metricsConfig.forEach(m => {
         sizes[m.id] = m.size;
@@ -210,7 +300,18 @@ export class AdminDashboardPage implements OnInit {
     }
   }
 
-
+  toggleMetricVisibility(metricId: string) {
+    const metric = this.metricsConfig.find(m => m.id === metricId);
+    if (metric) {
+      metric.hidden = !metric.hidden;
+      
+      const hiddenState: any = {};
+      this.metricsConfig.forEach(m => {
+        if (m.hidden) hiddenState[m.id] = true;
+      });
+      localStorage.setItem('adminDashboardMetricsHidden', JSON.stringify(hiddenState));
+    }
+  }
 
   dropMetric(event: CdkDragDrop<any[]>) {
     moveItemInArray(this.metricsConfig, event.previousIndex, event.currentIndex);
@@ -231,7 +332,8 @@ export class AdminDashboardPage implements OnInit {
       can_disburse_loans: [true],
       can_collect_payments: [true],
       can_view_reports: [false],
-      can_view_total_collections: [false]
+      can_view_total_collections: [false],
+      can_view_defaulters: [false]
     });
     this.editEmployeeForm = this.fb.group({
       name: ['', Validators.required],
@@ -242,7 +344,8 @@ export class AdminDashboardPage implements OnInit {
       can_disburse_loans: [true],
       can_collect_payments: [true],
       can_view_reports: [false],
-      can_view_total_collections: [false]
+      can_view_total_collections: [false],
+      can_view_defaulters: [false]
     });
 
     this.loanForm = this.fb.group({
@@ -307,7 +410,12 @@ export class AdminDashboardPage implements OnInit {
 
     this.editInvestmentForm = this.fb.group({
       amount: ['', [Validators.required, Validators.min(1)]],
-      source: ['', Validators.required]
+      reason: ['', Validators.required]
+    });
+
+    this.withdrawalForm = this.fb.group({
+      amount: ['', [Validators.required, Validators.min(1)]],
+      reason: ['', Validators.required]
     });
 
     this.changeMyPasswordForm = this.fb.group({
@@ -321,12 +429,10 @@ export class AdminDashboardPage implements OnInit {
   }
 
   setupLoanCalculationListeners() {
-    // Add Loan form listeners
     this.loanForm.get('loan_amount')?.valueChanges.subscribe(() => this.recalculateFromRate());
     this.loanForm.get('interest_rate')?.valueChanges.subscribe(() => this.recalculateFromRate());
     this.loanForm.get('interest_amount')?.valueChanges.subscribe(() => this.recalculateFromAmount());
 
-    // Edit Loan form listeners
     this.editLoanForm.get('loan_amount')?.valueChanges.subscribe(() => this.recalculateEditFromRate());
     this.editLoanForm.get('interest_rate')?.valueChanges.subscribe(() => this.recalculateEditFromRate());
     this.editLoanForm.get('interest_amount')?.valueChanges.subscribe(() => this.recalculateEditFromAmount());
@@ -382,7 +488,6 @@ export class AdminDashboardPage implements OnInit {
     this.isCalculating = false;
   }
 
-  // --- Edit Loan Calculators ---
   private recalculateEditFromRate() {
     if (this.isEditCalculating) return;
     this.isEditCalculating = true;
@@ -443,8 +548,6 @@ export class AdminDashboardPage implements OnInit {
       next: async (res) => {
         this.customers = res;
         this.filteredCustomersForLoan = [...res];
-        
-        // Save the freshly fetched organization-specific list to cache, overwriting previous cache
         const syncedCustomers = res.map((c: any) => ({ ...c, sync_status: 'Synced' }));
         await this.dbService.setCustomers(syncedCustomers);
       },
@@ -516,7 +619,7 @@ export class AdminDashboardPage implements OnInit {
         const amount = parseFloat(tx.amount) || 0;
         if (tx.type === 'collection' || tx.type === 'investment') {
           balance += amount;
-        } else if (tx.type === 'loan' || tx.type === 'expense') {
+        } else if (tx.type === 'loan' || tx.type === 'expense' || tx.type === 'withdrawal') {
           balance -= amount;
         }
       }
@@ -529,7 +632,6 @@ export class AdminDashboardPage implements OnInit {
 
     const doc = new jsPDF();
     
-    // Title
     doc.setFontSize(16);
     doc.text(`Cash Book / Ledger`, 14, 15);
     
@@ -571,15 +673,272 @@ export class AdminDashboardPage implements OnInit {
   }
 
   loadDashboardStats() {
-    this.apiService.getDashboardStats().subscribe({
-      next: (res) => this.dashboardStats = res,
+    this.apiService.getDashboardStats(this.dashboardFilterRange).subscribe({
+      next: (res) => {
+        this.dashboardStats = res;
+        
+        // Dynamic mappings for filtering
+        if (res.filtered_loans_given !== undefined) {
+          this.dashboardStats['total_loans_given'] = res.filtered_loans_given;
+        }
+        if (res.filtered_collections !== undefined) {
+          this.dashboardStats['total_collections_all_time'] = res.filtered_collections;
+        }
+        if (res.filtered_expenses !== undefined) {
+          this.dashboardStats['total_expenses'] = res.filtered_expenses;
+        }
+        if (res.filtered_investments !== undefined) {
+          this.dashboardStats['total_investments'] = res.filtered_investments;
+        }
+        if (res.filtered_extra !== undefined) {
+          this.dashboardStats['extra_amount'] = res.filtered_extra;
+        }
+        if (res.filtered_interests !== undefined) {
+          this.dashboardStats['interests'] = res.filtered_interests;
+        }
+      },
       error: (err) => console.error('Error loading dashboard stats:', err)
     });
   }
 
-  selectTab(tab: 'dashboard' | 'users' | 'customers' | 'loans' | 'collection' | 'total-collections' | 'reports' | 'investments' | 'expenses' | 'cashbook') {
+  selectTab(tab: 'dashboard' | 'users' | 'customers' | 'loans' | 'collection' | 'total-collections' | 'reports' | 'investments' | 'expenses' | 'withdrawals' | 'cashbook' | 'defaulters') {
     this.activeTab = tab;
     this.menuCtrl.close();
+    
+    if (tab === 'reports') {
+      setTimeout(() => {
+        this.generateCharts();
+      }, 300);
+    }
+  }
+
+  async recordWithdrawal() {
+    if (this.withdrawalForm.invalid) return;
+
+    const loader = await this.loadingCtrl.create({
+      message: 'Recording withdrawal...',
+      spinner: 'crescent'
+    });
+    await loader.present();
+
+    this.apiService.addWithdrawal(this.withdrawalForm.value).subscribe({
+      next: async () => {
+        loader.dismiss();
+        this.showToast('Withdrawal recorded successfully', 'success');
+        this.isWithdrawalModalOpen = false;
+        this.withdrawalForm.reset();
+        this.loadDashboardStats();
+        this.loadWithdrawals();
+        if (this.cashbookDate) this.loadCashbook();
+      },
+      error: async (err) => {
+        loader.dismiss();
+        this.showToast(err?.error?.error || 'Failed to record withdrawal', 'danger');
+      }
+    });
+  }
+
+  async onDeleteWithdrawal(uuid: string) {
+    const alert = await this.alertCtrl.create({
+      header: 'Confirm Delete',
+      message: 'Are you sure you want to delete this withdrawal?',
+      cssClass: 'custom-glass-alert',
+      buttons: [
+        { text: 'Cancel', role: 'cancel' },
+        {
+          text: 'Delete',
+          role: 'destructive',
+          handler: async () => {
+            const loader = await this.loadingCtrl.create({ message: 'Deleting...' });
+            await loader.present();
+            this.apiService.deleteWithdrawal(uuid).subscribe({
+              next: async () => {
+                loader.dismiss();
+                this.showToast('Withdrawal deleted', 'success');
+                this.loadWithdrawals();
+                this.loadDashboardStats();
+                if (this.cashbookDate) this.loadCashbook();
+              },
+              error: async (err) => {
+                loader.dismiss();
+                this.showToast(err?.error?.error || 'Failed to delete withdrawal', 'danger');
+              }
+            });
+          }
+        }
+      ]
+    });
+    await alert.present();
+  }
+
+  private charts: any = {};
+  
+  generateCharts() {
+    if (this.charts['collectionsTrend']) this.charts['collectionsTrend'].destroy();
+    if (this.charts['loanStatus']) this.charts['loanStatus'].destroy();
+    if (this.charts['incomeExpense']) this.charts['incomeExpense'].destroy();
+
+    // 1. Collections Trend (Last 30 Days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    const dailyCollections: any = {};
+    this.collections.forEach(col => {
+      const d = new Date(col.collection_date);
+      if (d >= thirtyDaysAgo) {
+        // Use local time instead of UTC to avoid shifting dates backward in IST
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const dateStr = `${year}-${month}-${day}`;
+
+        if (!dailyCollections[dateStr]) dailyCollections[dateStr] = 0;
+        dailyCollections[dateStr] += Number(col.collected_amount || 0);
+      }
+    });
+
+    // Sort dates
+    const sortedDates = Object.keys(dailyCollections).sort();
+    const trendData = sortedDates.map(date => dailyCollections[date]);
+    const trendLabels = sortedDates.map(date => new Date(date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+
+    const ctxTrend = document.getElementById('collectionsTrendChart') as HTMLCanvasElement;
+    if (ctxTrend) {
+      this.charts['collectionsTrend'] = new Chart(ctxTrend, {
+        type: 'line',
+        data: {
+          labels: trendLabels,
+          datasets: [{
+            label: 'Amount Collected (₹)',
+            data: trendData,
+            borderColor: '#3b82f6',
+            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+            borderWidth: 3,
+            tension: 0.4,
+            fill: true,
+            pointHitRadius: 50 // Makes points much easier to tap on mobile
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: {
+            mode: 'index',
+            intersect: false, // Shows tooltip even if not exactly on the point
+          },
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            y: { beginAtZero: true }
+          }
+        }
+      });
+    }
+
+    // 2. Loan Status Distribution
+    let active = 0, closed = 0, defaultStatus = 0;
+    this.loans.forEach(loan => {
+      const status = loan.status?.toLowerCase();
+      if (status === 'active') active++;
+      else if (status === 'closed') closed++;
+      else if (status === 'default') defaultStatus++;
+    });
+
+    const ctxStatus = document.getElementById('loanStatusChart') as HTMLCanvasElement;
+    if (ctxStatus) {
+      this.charts['loanStatus'] = new Chart(ctxStatus, {
+        type: 'doughnut',
+        data: {
+          labels: ['Active', 'Closed', 'Default'],
+          datasets: [{
+            data: [active, closed, defaultStatus],
+            backgroundColor: ['#10b981', '#64748b', '#ef4444'],
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '70%',
+          plugins: {
+            legend: { position: 'bottom' }
+          }
+        }
+      });
+    }
+
+    // 3. Disbursed vs Collected
+    const disbursed = Number(this.dashboardStats?.total_loans_given || 0);
+    const collected = Number(this.dashboardStats?.total_collections_all_time || 0);
+
+    const ctxIncExp = document.getElementById('incomeExpenseChart') as HTMLCanvasElement;
+    if (ctxIncExp) {
+      this.charts['incomeExpense'] = new Chart(ctxIncExp, {
+        type: 'bar',
+        data: {
+          labels: ['Loan Disbursed', 'Collection'],
+          datasets: [{
+            data: [disbursed, collected],
+            backgroundColor: ['#14b8a6', '#8b5cf6'],
+            borderRadius: 8,
+            maxBarThickness: 60
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            y: { beginAtZero: true }
+          }
+        }
+      });
+    }
+
+    // 4. Employee Analytics (Stacked Bar Chart)
+    const employeeData = this.getEmployeeCollectionSummary();
+    const empLabels = employeeData.map(e => e.name);
+    const empCashData = employeeData.map(e => e.cashTotal);
+    const empOnlineData = employeeData.map(e => e.onlineTotal);
+
+    const ctxEmp = document.getElementById('employeePerformanceChart') as HTMLCanvasElement;
+    if (ctxEmp) {
+      if (this.charts['employeePerformance']) this.charts['employeePerformance'].destroy();
+      this.charts['employeePerformance'] = new Chart(ctxEmp, {
+        type: 'bar',
+        data: {
+          labels: empLabels,
+          datasets: [
+            {
+              label: 'Cash Collections (₹)',
+              data: empCashData,
+              backgroundColor: '#10b981', // green
+              maxBarThickness: 50
+            },
+            {
+              label: 'Online Collections (₹)',
+              data: empOnlineData,
+              backgroundColor: '#3b82f6', // blue
+              maxBarThickness: 50
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'bottom' }
+          },
+          scales: {
+            x: { stacked: true },
+            y: { stacked: true, beginAtZero: true }
+          }
+        }
+      });
+    }
   }
 
   // --- Customer Manage Actions (Edit & Delete) ---
@@ -811,6 +1170,10 @@ export class AdminDashboardPage implements OnInit {
     });
   }
 
+  getTotalFilteredCollectionAmount(): number {
+    return this.getAllCollectionsSorted().reduce((sum, col) => sum + (parseFloat(col.collected_amount) || 0), 0);
+  }
+
   getFilteredExpenses() {
     let list = [...this.allExpenses];
     if (this.expenseFilterDate) {
@@ -1012,7 +1375,8 @@ export class AdminDashboardPage implements OnInit {
           can_disburse_loans: true,
           can_collect_payments: true,
           can_view_reports: false,
-          can_view_total_collections: false
+          can_view_total_collections: false,
+          can_view_defaulters: false
         });
         this.loadData();
 
@@ -1031,7 +1395,8 @@ export class AdminDashboardPage implements OnInit {
       can_disburse_loans: emp.can_disburse_loans === 1 || emp.can_disburse_loans === true,
       can_collect_payments: emp.can_collect_payments === 1 || emp.can_collect_payments === true,
       can_view_reports: emp.can_view_reports === 1 || emp.can_view_reports === true,
-      can_view_total_collections: emp.can_view_total_collections === 1 || emp.can_view_total_collections === true
+      can_view_total_collections: emp.can_view_total_collections === 1 || emp.can_view_total_collections === true,
+      can_view_defaulters: emp.can_view_defaulters === 1 || emp.can_view_defaulters === true
     });
     this.isManagePermissionsOpen = true;
   }

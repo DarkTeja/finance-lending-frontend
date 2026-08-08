@@ -31,7 +31,7 @@ const routes: Routes = [
     data: { expectedRole: 'superadmin' }
   },
   {
-    path: '',
+    path: '**',
     redirectTo: 'login',
     pathMatch: 'full'
   }

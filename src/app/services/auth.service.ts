@@ -33,9 +33,8 @@ export class AuthService {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     
-    // Clear offline cache to prevent cross-tenant data merging
-    localStorage.removeItem('money_lending_customers');
-    localStorage.removeItem('money_lending_sync_queue');
+    // Clear user cache
+    localStorage.removeItem('money_lending_user');
     
     this.router.navigate(['/login']);
   }

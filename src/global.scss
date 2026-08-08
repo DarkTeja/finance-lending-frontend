@@ -35,3 +35,58 @@
 /* @import "@ionic/angular/css/palettes/dark.always.css"; */
 /* @import "@ionic/angular/css/palettes/dark.class.css"; */
 @import "@ionic/angular/css/palettes/dark.system.css";
+
+.custom-glass-alert {
+  --background: rgba(30, 41, 59, 0.85);
+  --backdrop-opacity: 0.6;
+  
+  .alert-wrapper {
+    background: rgba(30, 41, 59, 0.85) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 24px !important;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
+    padding: 10px;
+  }
+
+  .alert-title {
+    color: #f1f5f9 !important;
+    font-weight: 700 !important;
+    font-size: 20px !important;
+    margin-top: 10px !important;
+  }
+
+  .alert-message {
+    color: #cbd5e1 !important;
+    font-size: 15px !important;
+    line-height: 1.5 !important;
+  }
+
+  .alert-button-group {
+    padding: 10px !important;
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+  }
+
+  .alert-button {
+    border-radius: 12px !important;
+    font-weight: 600 !important;
+    text-transform: capitalize !important;
+    padding: 12px 24px !important;
+    margin: 0 !important;
+  }
+
+  .alert-button.alert-button-role-cancel {
+    color: #94a3b8 !important;
+    background: rgba(148, 163, 184, 0.1) !important;
+  }
+
+  .alert-button.alert-button-role-destructive {
+    color: #ef4444 !important;
+    background: rgba(239, 68, 68, 0.15) !important;
+    border: 1px solid rgba(239, 68, 68, 0.3) !important;
+  }
+}
+

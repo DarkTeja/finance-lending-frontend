@@ -7,7 +7,7 @@ import { Observable } from 'rxjs';
 })
 export class ApiService {
   // Use host PC local network IP so mobile browser can connect
-  private readonly baseUrl = 'http://192.168.1.40:3000';
+  private readonly baseUrl = 'http://192.168.1.9:3000';
 
   constructor(private http: HttpClient) {}
 
@@ -134,8 +134,8 @@ export class ApiService {
     return this.http.put(`${this.baseUrl}/collections/${uuid}`, data, { headers: this.getHeaders() });
   }
 
-  getDashboardStats(): Observable<any> {
-    return this.http.get(`${this.baseUrl}/dashboard/stats`, { headers: this.getHeaders() });
+  getDashboardStats(range: string = 'all'): Observable<any> {
+    return this.http.get(`${this.baseUrl}/dashboard/stats?range=${range}`, { headers: this.getHeaders() });
   }
 
   addExpense(data: any): Observable<any> {
@@ -178,5 +178,17 @@ export class ApiService {
       url += `?date=${date}`;
     }
     return this.http.get(url, { headers: this.getHeaders() });
+  }
+  // --- Withdrawals ---
+  getWithdrawals(): Observable<any> {
+    return this.http.get(`${this.baseUrl}/withdrawals`, { headers: this.getHeaders() });
+  }
+
+  addWithdrawal(data: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}/withdrawals`, data, { headers: this.getHeaders() });
+  }
+
+  deleteWithdrawal(uuid: string): Observable<any> {
+    return this.http.delete(`${this.baseUrl}/withdrawals/${uuid}`, { headers: this.getHeaders() });
   }
 }

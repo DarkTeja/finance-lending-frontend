@@ -30,72 +30,6 @@ export class EmployeeDashboardPage implements OnInit {
   customersDisplayLimit = 20;
   loansDisplayLimit = 20;
   todayCollectionsDisplayLimit = 20;
-
-  totalCollectionsDisplayLimit = 20;
-
-  loadMore(event: any, listType: 'customers' | 'loans' | 'todayCollections' | 'totalCollections') {
-    if (listType === 'customers') {
-      this.customersDisplayLimit += 20;
-    } else if (listType === 'loans') {
-      this.loansDisplayLimit += 20;
-    } else if (listType === 'todayCollections') {
-      this.todayCollectionsDisplayLimit += 20;
-    } else if (listType === 'totalCollections') {
-      this.totalCollectionsDisplayLimit += 20;
-    }
-    
-    if (event && event.target) {
-      event.target.complete();
-    }
-  }
-
-  isOnline = true;
-  
-  activeTab: 'dashboard' | 'customers' | 'loans' | 'collection' | 'total-collections' | 'defaulters' = 'dashboard';
-  collectionFilterDate: string = '';
-
-  defaultersDaysThreshold = 5;
-  getDefaulters() {
-    const now = new Date();
-    return this.loans.filter(loan => {
-      if (loan.status !== 'active') return false;
-      
-      const loanCollections = this.collections.filter(c => c.loan_uuid === loan.uuid);
-      let lastDate: Date;
-      
-      if (loanCollections.length > 0) {
-        loanCollections.sort((a, b) => new Date(b.collection_date).getTime() - new Date(a.collection_date).getTime());
-        lastDate = new Date(loanCollections[0].collection_date);
-        loan.last_paid_date = loanCollections[0].collection_date; 
-      } else {
-        lastDate = new Date(loan.created_at);
-        loan.last_paid_date = null;
-      }
-      
-      const diffTime = Math.abs(now.getTime() - lastDate.getTime());
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      
-      return diffDays > this.defaultersDaysThreshold;
-    });
-  }
-
-  dashboardStats: any = { today_collection: 0, today_count: 0, today_expenses: 0 };
-  
-  isEditingLayout = false;
-  metricsConfig: any[] = [
-    { id: 'today', title: 'Today Collection', color: '#3b82f6', key: 'today_collection', size: 'half' },
-    { id: 'count', title: 'Collections Count', color: '#ec4899', key: 'today_count', size: 'half' },
-    { id: 'exp', title: 'Today Expenses', color: '#e74c3c', key: 'today_expenses', size: 'half' }
-  ];
-
-  expenseForm!: FormGroup;
-  isAddExpenseOpen = false;
-
-  loanForm!: FormGroup;
-  isAddLoanOpen = false;
-  isAccountsGridOpen = false;
-  highlightedLoanUuid: string | null = null;
-
   // Search and Select variables for Loan Form
   customerSearchQuery = '';
   filteredCustomersForLoan: any[] = [];
@@ -120,9 +54,9 @@ export class EmployeeDashboardPage implements OnInit {
   constructor(
     private fb: FormBuilder,
     private apiService: ApiService,
-    public dbService: DbService,
-    public syncService: SyncService,
     private authService: AuthService,
+    private dbService: DbService,
+    private syncService: SyncService,
     private toastCtrl: ToastController,
     private loadingCtrl: LoadingController,
     private menuCtrl: MenuController

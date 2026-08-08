@@ -3,8 +3,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { IonicModule, ToastController, LoadingController, NavController } from '@ionic/angular';
 import { Router } from '@angular/router';
-import { DbService } from '../../services/db.service';
 import { ApiService } from '../../services/api.service';
+import { DbService } from '../../services/db.service';
 import { SyncService } from '../../services/sync.service';
 import { AuthService } from '../../services/auth.service';
 
@@ -22,9 +22,9 @@ export class AddCustomerPage implements OnInit {
 
   constructor(
     private fb: FormBuilder,
-    private dbService: DbService,
     private apiService: ApiService,
-    private syncService: SyncService,
+    public dbService: DbService,
+    public syncService: SyncService,
     private authService: AuthService,
     private router: Router,
     private toastCtrl: ToastController,
