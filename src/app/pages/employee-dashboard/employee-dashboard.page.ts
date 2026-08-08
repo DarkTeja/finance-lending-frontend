@@ -423,6 +423,10 @@ export class EmployeeDashboardPage implements OnInit {
   }
 
   getLoanTotalPaid(loanUuid: string): number {
+    const loan = this.loans.find(l => l.uuid === loanUuid);
+    if (loan && loan.total_paid !== undefined) {
+      return parseFloat(loan.total_paid);
+    }
     return this.collections
       .filter(c => c.loan_uuid === loanUuid)
       .reduce((sum, c) => sum + (parseFloat(c.collected_amount) || 0), 0);
