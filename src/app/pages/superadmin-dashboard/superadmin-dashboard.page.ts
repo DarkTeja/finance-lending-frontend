@@ -53,7 +53,8 @@ export class SuperadminDashboardPage implements OnInit {
       username: ['', [Validators.required, Validators.minLength(3)]],
       password: ['', [Validators.required, Validators.minLength(6)]],
       name: ['', [Validators.required, Validators.minLength(3)]],
-      mobile_number: ['', [Validators.pattern('^[0-9]{10}$')]],
+      email: ['', [Validators.required, Validators.email]],
+      mobile_number: ['', [Validators.required, Validators.pattern('^[0-9]{10}$')]],
       organization_uuid: ['', [Validators.required]]
     });
 
@@ -63,7 +64,8 @@ export class SuperadminDashboardPage implements OnInit {
 
     this.editAdminForm = this.fb.group({
       name: ['', [Validators.required, Validators.minLength(3)]],
-      mobile_number: ['', [Validators.pattern('^[0-9]{10}$')]],
+      email: ['', [Validators.required, Validators.email]],
+      mobile_number: ['', [Validators.required, Validators.pattern('^[0-9]{10}$')]],
       organization_uuid: ['', [Validators.required]]
     });
 
@@ -174,6 +176,7 @@ export class SuperadminDashboardPage implements OnInit {
     this.selectedEditAdmin = admin;
     this.editAdminForm.patchValue({
       name: admin.name,
+      email: admin.email,
       mobile_number: admin.mobile_number,
       organization_uuid: admin.organization_uuid || ''
     });

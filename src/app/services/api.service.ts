@@ -7,7 +7,7 @@ import { Observable } from 'rxjs';
 })
 export class ApiService {
   // Use host PC local network IP so mobile browser can connect
-  private readonly baseUrl = 'http://192.168.1.9:3000';
+  private readonly baseUrl = 'http://3.108.58.194';
 
   constructor(private http: HttpClient) {}
 
@@ -30,6 +30,14 @@ export class ApiService {
 
   changeMyPassword(data: any): Observable<any> {
     return this.http.put(`${this.baseUrl}/auth/me/password`, data, { headers: this.getHeaders() });
+  }
+
+  forgotPassword(data: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}/auth/forgot-password`, data);
+  }
+
+  resetPassword(data: any): Observable<any> {
+    return this.http.post(`${this.baseUrl}/auth/reset-password`, data);
   }
 
   // --- Employees ---

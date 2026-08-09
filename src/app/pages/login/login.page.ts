@@ -6,12 +6,14 @@ import { Router } from '@angular/router';
 import { ApiService } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
 
+import { RouterModule } from '@angular/router';
+
 @Component({
   selector: 'app-login',
   templateUrl: './login.page.html',
   styleUrls: ['./login.page.scss'],
   standalone: true,
-  imports: [CommonModule, IonicModule, FormsModule, ReactiveFormsModule]
+  imports: [CommonModule, IonicModule, FormsModule, ReactiveFormsModule, RouterModule]
 })
 export class LoginPage implements OnInit {
   loginForm!: FormGroup;
