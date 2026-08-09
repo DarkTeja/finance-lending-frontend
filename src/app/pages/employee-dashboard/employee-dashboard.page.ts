@@ -487,7 +487,10 @@ export class EmployeeDashboardPage implements OnInit {
     await loader.present();
 
     try {
-      const position = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 5000 });
+      const position: any = await Promise.race([
+        Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 5000 }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Location timeout')), 5500))
+      ]);
       rawForm.latitude = position.coords.latitude;
       rawForm.longitude = position.coords.longitude;
     } catch (e) {
@@ -569,7 +572,10 @@ export class EmployeeDashboardPage implements OnInit {
     await loader.present();
 
     try {
-      const position = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 5000 });
+      const position: any = await Promise.race([
+        Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 5000 }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Location timeout')), 5500))
+      ]);
       payload.latitude = position.coords.latitude;
       payload.longitude = position.coords.longitude;
     } catch (e) {

@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { IonicModule, ToastController, LoadingController } from '@ionic/angular';
+import { IonicModule, ToastController, LoadingController, Platform } from '@ionic/angular';
 import { Router } from '@angular/router';
 import { ApiService } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
@@ -24,7 +24,8 @@ export class LoginPage implements OnInit {
     private authService: AuthService,
     private router: Router,
     private toastCtrl: ToastController,
-    private loadingCtrl: LoadingController
+    private loadingCtrl: LoadingController,
+    private platform: Platform
   ) {}
 
   ngOnInit() {
@@ -32,6 +33,19 @@ export class LoginPage implements OnInit {
       username: ['', [Validators.required, Validators.minLength(3)]],
       password: ['', [Validators.required, Validators.minLength(4)]]
     });
+  }
+
+  ionViewWillEnter() {
+    if (this.authService.isLoggedIn()) {
+      const user = this.authService.getCurrentUser();
+      if (user?.role === 'superadmin') {
+        this.router.navigate(['/superadmin-dashboard']);
+      } else if (user?.role === 'admin') {
+        this.router.navigate(['/admin-dashboard']);
+      } else if (user?.role === 'employee') {
+        this.router.navigate(['/employee-dashboard']);
+      }
+    }
   }
 
   async onSubmit() {
@@ -47,6 +61,17 @@ export class LoginPage implements OnInit {
       next: async (res) => {
         loader.dismiss();
         this.authService.saveSession(res.token, res.user);
+
+        // Request Push Notification permissions for admins on Android
+        if ((res.user.role === 'admin' || res.user.role === 'superadmin') && this.platform.is('capacitor')) {
+          import('@capacitor/push-notifications').then(({ PushNotifications }) => {
+            PushNotifications.requestPermissions().then((perm) => {
+              if (perm.receive === 'granted') {
+                PushNotifications.register();
+              }
+            });
+          }).catch(err => console.warn('Push not supported', err));
+        }
 
         const toast = await this.toastCtrl.create({
           message: `Welcome back, ${res.user.name}!`,

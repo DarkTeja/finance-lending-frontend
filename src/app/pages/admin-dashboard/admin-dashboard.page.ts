@@ -420,12 +420,22 @@ export class AdminDashboardPage implements OnInit {
 
     this.changeMyPasswordForm = this.fb.group({
       current_password: ['', [Validators.required]],
-      new_password: ['', [Validators.required, Validators.minLength(6)]]
-    });
+      new_password: ['', [Validators.required, Validators.minLength(6)]],
+      confirm_password: ['', [Validators.required]]
+    }, { validators: this.passwordMatchValidator('new_password', 'confirm_password') });
 
     this.resetEmployeePasswordForm = this.fb.group({
-      newPassword: ['', [Validators.required, Validators.minLength(6)]]
-    });
+      newPassword: ['', [Validators.required, Validators.minLength(6)]],
+      confirmPassword: ['', [Validators.required]]
+    }, { validators: this.passwordMatchValidator('newPassword', 'confirmPassword') });
+  }
+
+  passwordMatchValidator(passwordKey: string, confirmPasswordKey: string) {
+    return (g: FormGroup) => {
+      const password = g.get(passwordKey)?.value;
+      const confirmPassword = g.get(confirmPasswordKey)?.value;
+      return password === confirmPassword ? null : { mismatch: true };
+    };
   }
 
   setupLoanCalculationListeners() {
@@ -1036,12 +1046,32 @@ export class AdminDashboardPage implements OnInit {
     }
 
     const loader = await this.loadingCtrl.create({
-      message: 'Saving changes...',
+      message: 'Fetching location and saving...',
       spinner: 'crescent'
     });
     await loader.present();
 
-    this.apiService.updateLoan(this.selectedLoanForManage.uuid, rawForm).subscribe({
+    let latitude = null;
+    let longitude = null;
+
+    try {
+      const position: any = await Promise.race([
+        Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 5000 }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Location timeout')), 5500))
+      ]);
+      latitude = position.coords.latitude;
+      longitude = position.coords.longitude;
+    } catch (err) {
+      console.warn('Could not fetch location during loan update:', err);
+    }
+
+    const payload = {
+      ...rawForm,
+      latitude,
+      longitude
+    };
+
+    this.apiService.updateLoan(this.selectedLoanForManage.uuid, payload).subscribe({
       next: async () => {
         loader.dismiss();
         this.isEditLoanOpen = false;
@@ -1335,7 +1365,10 @@ export class AdminDashboardPage implements OnInit {
     await loader.present();
 
     try {
-      const position = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 5000 });
+      const position: any = await Promise.race([
+        Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 5000 }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Location timeout')), 5500))
+      ]);
       rawForm.latitude = position.coords.latitude;
       rawForm.longitude = position.coords.longitude;
     } catch (e) {
@@ -1537,7 +1570,10 @@ export class AdminDashboardPage implements OnInit {
     await loader.present();
 
     try {
-      const position = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 5000 });
+      const position: any = await Promise.race([
+        Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 5000 }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Location timeout')), 5500))
+      ]);
       payload.latitude = position.coords.latitude;
       payload.longitude = position.coords.longitude;
     } catch (e) {

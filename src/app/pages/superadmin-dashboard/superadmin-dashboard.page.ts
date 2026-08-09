@@ -71,8 +71,17 @@ export class SuperadminDashboardPage implements OnInit {
 
     this.changeMyPasswordForm = this.fb.group({
       current_password: ['', [Validators.required]],
-      new_password: ['', [Validators.required, Validators.minLength(6)]]
-    });
+      new_password: ['', [Validators.required, Validators.minLength(6)]],
+      confirm_password: ['', [Validators.required]]
+    }, { validators: this.passwordMatchValidator('new_password', 'confirm_password') });
+  }
+
+  passwordMatchValidator(passwordKey: string, confirmPasswordKey: string) {
+    return (g: FormGroup) => {
+      const password = g.get(passwordKey)?.value;
+      const confirmPassword = g.get(confirmPasswordKey)?.value;
+      return password === confirmPassword ? null : { mismatch: true };
+    };
   }
 
   loadData() {

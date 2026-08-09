@@ -1726,6 +1726,11 @@
                   <label style="color: #475569; font-weight: 600; margin-bottom: 6px; display: block;">New Password *</label>
                   <input type="password" formControlName="new_password" placeholder="Min 6 characters" style="width: 100%; padding: 14px 16px; border-radius: 12px; border: 1px solid rgba(0, 0, 0, 0.1); background: #f8fafc; font-size: 15px; color: #1e293b; outline: none;" />
                 </div>
+                <div style="margin-bottom: 20px;">
+                  <label style="display: block; font-size: 14px; font-weight: 600; color: #334155; margin-bottom: 8px;">Confirm Password</label>
+                  <input type="password" formControlName="confirm_password" placeholder="Confirm new password" style="width: 100%; padding: 14px 16px; border-radius: 12px; border: 1px solid rgba(0, 0, 0, 0.1); background: #f8fafc; font-size: 15px; color: #1e293b; outline: none;" />
+                  <div *ngIf="changeMyPasswordForm.hasError('mismatch')" style="color: #ef4444; font-size: 12px; margin-top: 5px;">Passwords do not match</div>
+                </div>
                 <button type="submit" [disabled]="changeMyPasswordForm.invalid" class="submit-modal-btn" style="width: 100%; padding: 16px; border-radius: 12px; background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; font-size: 16px; font-weight: 700; border: none; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3); transition: transform 0.2s;">
                   <ion-icon name="save-outline" style="vertical-align: middle; margin-right: 4px; font-size: 20px;"></ion-icon> Update Password
                 </button>
@@ -1766,6 +1771,11 @@
                 <div class="input-group" style="margin-bottom: 24px;">
                   <label style="color: #475569; font-weight: 600; margin-bottom: 6px; display: block;">New Password *</label>
                   <input type="password" formControlName="newPassword" style="width: 100%; padding: 14px 16px; border-radius: 12px; border: 1px solid rgba(0, 0, 0, 0.1); background: #f8fafc; font-size: 15px; color: #1e293b; outline: none;" placeholder="Min 6 characters" />
+                </div>
+                <div style="margin-bottom: 25px;">
+                  <label style="display: block; font-size: 14px; font-weight: 600; color: #334155; margin-bottom: 8px;">Confirm Password</label>
+                  <input type="password" formControlName="confirmPassword" style="width: 100%; padding: 14px 16px; border-radius: 12px; border: 1px solid rgba(0, 0, 0, 0.1); background: #f8fafc; font-size: 15px; color: #1e293b; outline: none;" placeholder="Confirm new password" />
+                  <div *ngIf="resetEmployeePasswordForm.hasError('mismatch')" style="color: #ef4444; font-size: 12px; margin-top: 5px;">Passwords do not match</div>
                 </div>
                 
                 <button type="submit" [disabled]="resetEmployeePasswordForm.invalid" class="submit-modal-btn" style="width: 100%; padding: 16px; border-radius: 12px; background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; font-size: 16px; font-weight: 700; border: none; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3); transition: transform 0.2s;">

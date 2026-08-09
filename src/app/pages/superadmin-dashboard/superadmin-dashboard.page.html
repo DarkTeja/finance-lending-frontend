@@ -229,6 +229,11 @@
             <label>New Password *</label>
             <input type="password" formControlName="new_password" placeholder="Min 6 characters" />
           </div>
+          <div class="input-group">
+            <label>Confirm Password</label>
+            <input type="password" formControlName="confirm_password" placeholder="Confirm new password" />
+            <div *ngIf="changeMyPasswordForm.hasError('mismatch')" style="color: #ef4444; font-size: 12px; margin-top: 5px;">Passwords do not match</div>
+          </div>
           <button type="submit" [disabled]="changeMyPasswordForm.invalid" class="submit-modal-btn">
             Update Password
           </button>

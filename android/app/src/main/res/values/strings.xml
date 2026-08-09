@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Finance Lending</string>
+    <string name="title_activity_main">Finance Lending</string>
+    <string name="package_name">com.darkteja.financelendingapp</string>
+    <string name="custom_url_scheme">com.darkteja.financelendingapp</string>
+</resources>
