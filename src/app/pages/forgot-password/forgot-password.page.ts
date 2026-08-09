@@ -35,7 +35,7 @@ export class ForgotPasswordPage implements OnInit {
     if (this.forgotPasswordForm.invalid) return;
 
     const loader = await this.loadingCtrl.create({
-      message: 'Sending reset link...',
+      message: 'Sending OTP...',
       spinner: 'crescent'
     });
     await loader.present();
@@ -44,13 +44,13 @@ export class ForgotPasswordPage implements OnInit {
       next: async (res) => {
         loader.dismiss();
         const toast = await this.toastCtrl.create({
-          message: 'Password reset link has been sent to your email.',
+          message: 'An OTP has been sent to your email.',
           duration: 3000,
           color: 'success',
           position: 'bottom'
         });
         await toast.present();
-        this.router.navigate(['/login']);
+        this.router.navigate(['/reset-password'], { queryParams: { email: this.forgotPasswordForm.value.email } });
       },
       error: async (err) => {
         loader.dismiss();

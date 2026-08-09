@@ -16,9 +16,7 @@ import { RouterModule } from '@angular/router';
 })
 export class ResetPasswordPage implements OnInit {
   resetForm!: FormGroup;
-  token: string | null = null;
-  isValidating = true;
-  isValidToken = false;
+  email: string | null = null;
 
   constructor(
     private fb: FormBuilder,
@@ -31,18 +29,15 @@ export class ResetPasswordPage implements OnInit {
 
   ngOnInit() {
     this.resetForm = this.fb.group({
+      otp: ['', [Validators.required, Validators.minLength(6), Validators.maxLength(6)]],
       password: ['', [Validators.required, Validators.minLength(6)]],
       confirmPassword: ['', [Validators.required]]
     }, { validators: this.passwordMatchValidator });
 
     this.route.queryParams.subscribe(params => {
-      this.token = params['token'];
-      if (this.token) {
-        this.isValidating = false;
-        this.isValidToken = true;
-      } else {
-        this.isValidating = false;
-        this.isValidToken = false;
+      this.email = params['email'];
+      if (!this.email) {
+        this.router.navigate(['/forgot-password']);
       }
     });
   }
@@ -53,7 +48,7 @@ export class ResetPasswordPage implements OnInit {
   }
 
   async onSubmit() {
-    if (this.resetForm.invalid || !this.token) return;
+    if (this.resetForm.invalid || !this.email) return;
 
     const loader = await this.loadingCtrl.create({
       message: 'Resetting password...',
@@ -62,7 +57,8 @@ export class ResetPasswordPage implements OnInit {
     await loader.present();
 
     const data = {
-      token: this.token,
+      email: this.email,
+      otp: this.resetForm.value.otp,
       newPassword: this.resetForm.value.password
     };
 
