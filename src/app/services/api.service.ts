@@ -40,6 +40,11 @@ export class ApiService {
     return this.http.post(`${this.baseUrl}/auth/reset-password`, data);
   }
 
+  // --- Notifications ---
+  registerPushToken(token: string): Observable<any> {
+    return this.http.post(`${this.baseUrl}/notifications/token`, { token }, { headers: this.getHeaders() });
+  }
+
   // --- Employees ---
   getEmployees(): Observable<any> {
     return this.http.get(`${this.baseUrl}/users/employees`, { headers: this.getHeaders() });
