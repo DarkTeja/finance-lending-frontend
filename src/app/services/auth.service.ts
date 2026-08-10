@@ -1,11 +1,12 @@
 import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
+import { ApiService } from './api.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
-  constructor(private router: Router) {}
+  constructor(private router: Router, private apiService: ApiService) {}
 
   saveSession(token: string, user: any) {
     localStorage.setItem('token', token);
@@ -30,9 +31,23 @@ export class AuthService {
   }
 
   logout() {
+    if (this.isLoggedIn()) {
+      // Unregister device token to prevent push notification leaks to next user
+      this.apiService.unregisterPushToken().subscribe({
+        next: () => this.clearLocalSession(),
+        error: (err) => {
+          console.error('Failed to unregister push token:', err);
+          this.clearLocalSession();
+        }
+      });
+    } else {
+      this.clearLocalSession();
+    }
+  }
+
+  private clearLocalSession() {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    
     // Clear user cache
     localStorage.removeItem('money_lending_user');
     

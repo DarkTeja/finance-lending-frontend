@@ -17,6 +17,7 @@ import { RouterModule } from '@angular/router';
 })
 export class LoginPage implements OnInit {
   loginForm!: FormGroup;
+  showPassword = false;
 
   constructor(
     private fb: FormBuilder,

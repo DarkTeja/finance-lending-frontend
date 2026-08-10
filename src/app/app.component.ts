@@ -28,23 +28,15 @@ export class AppComponent implements OnInit {
       return;
     }
 
-    // Only set up if logged in
-    if (!this.authService.isLoggedIn()) {
-      return;
-    }
-
-    PushNotifications.requestPermissions().then((result) => {
-      if (result.receive === 'granted') {
-        PushNotifications.register();
-      }
-    });
-
+    // ALWAYS register listeners, because they might log in later during this session
     PushNotifications.addListener('registration', (token: Token) => {
       console.log('Push registration success, token: ' + token.value);
-      this.apiService.registerPushToken(token.value).subscribe({
-        next: () => console.log('Token successfully sent to backend'),
-        error: (err: any) => console.error('Failed to send token to backend', err)
-      });
+      if (this.authService.isLoggedIn()) {
+        this.apiService.registerPushToken(token.value).subscribe({
+          next: () => console.log('Token successfully sent to backend'),
+          error: (err: any) => console.error('Failed to send token to backend', err)
+        });
+      }
     });
 
     PushNotifications.addListener('registrationError', (error: any) => {
@@ -58,6 +50,15 @@ export class AppComponent implements OnInit {
     PushNotifications.addListener('pushNotificationActionPerformed', (notification: ActionPerformed) => {
       console.log('Push action performed: ' + JSON.stringify(notification));
     });
+
+    // Only attempt to auto-register on boot if already logged in
+    if (this.authService.isLoggedIn()) {
+      PushNotifications.requestPermissions().then((result) => {
+        if (result.receive === 'granted') {
+          PushNotifications.register();
+        }
+      });
+    }
 
     // Create the custom channel with the sound file provided by the user
     PushNotifications.createChannel({

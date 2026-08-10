@@ -8,6 +8,9 @@ import { ApiService } from '../../services/api.service';
 import { DbService } from '../../services/db.service';
 import { SyncService } from '../../services/sync.service';
 import { AuthService } from '../../services/auth.service';
+import { Capacitor } from '@capacitor/core';
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { DragDropModule, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
@@ -328,7 +331,7 @@ export class AdminDashboardPage implements OnInit {
       name: ['', Validators.required],
       username: ['', Validators.required],
       password: ['', [Validators.required, Validators.minLength(6)]],
-      mobile_number: [''],
+      mobile_number: ['', [Validators.required, Validators.pattern('^[0-9]{10}$')]],
       can_disburse_loans: [true],
       can_collect_payments: [true],
       can_view_reports: [false],
@@ -337,7 +340,7 @@ export class AdminDashboardPage implements OnInit {
     });
     this.editEmployeeForm = this.fb.group({
       name: ['', Validators.required],
-      mobile_number: ['']
+      mobile_number: ['', [Validators.required, Validators.pattern('^[0-9]{10}$')]]
     });
 
     this.permissionForm = this.fb.group({
@@ -410,7 +413,7 @@ export class AdminDashboardPage implements OnInit {
 
     this.editInvestmentForm = this.fb.group({
       amount: ['', [Validators.required, Validators.min(1)]],
-      reason: ['', Validators.required]
+      source: ['', Validators.required]
     });
 
     this.withdrawalForm = this.fb.group({
@@ -556,16 +559,26 @@ export class AdminDashboardPage implements OnInit {
 
     this.apiService.getCustomers().subscribe({
       next: async (res) => {
-        this.customers = res;
-        this.filteredCustomersForLoan = [...res];
+        const sorted = res.sort((a: any, b: any) => {
+          const tA = a.created_at ? new Date(a.created_at).getTime() : Date.now();
+          const tB = b.created_at ? new Date(b.created_at).getTime() : Date.now();
+          return tB - tA;
+        });
+        this.customers = sorted;
+        this.filteredCustomersForLoan = [...sorted];
         const syncedCustomers = res.map((c: any) => ({ ...c, sync_status: 'Synced' }));
         await this.dbService.setCustomers(syncedCustomers);
       },
       error: async (err) => {
         console.error('Error loading customers from server, falling back to local DB:', err);
         const cached = await this.dbService.getCustomers();
-        this.customers = cached;
-        this.filteredCustomersForLoan = [...cached];
+        const sorted = cached.sort((a: any, b: any) => {
+          const tA = a.created_at ? new Date(a.created_at).getTime() : Date.now();
+          const tB = b.created_at ? new Date(b.created_at).getTime() : Date.now();
+          return tB - tA;
+        });
+        this.customers = sorted;
+        this.filteredCustomersForLoan = [...sorted];
       }
     });
 
@@ -645,8 +658,11 @@ export class AdminDashboardPage implements OnInit {
     doc.setFontSize(16);
     doc.text(`Cash Book / Ledger`, 14, 15);
     
+    const cbDateObj = new Date(this.cashbookDate);
+    const formattedCbDate = `${cbDateObj.getDate().toString().padStart(2, '0')}/${(cbDateObj.getMonth() + 1).toString().padStart(2, '0')}/${cbDateObj.getFullYear()}`;
+
     doc.setFontSize(11);
-    doc.text(`Date: ${this.cashbookDate}`, 14, 23);
+    doc.text(`Date: ${formattedCbDate}`, 14, 23);
     doc.text(`Opening Balance: Rs. ${this.cashbookData.opening_balance}`, 14, 29);
 
     const tableData = [];
@@ -679,7 +695,9 @@ export class AdminDashboardPage implements OnInit {
     doc.setFontSize(12);
     doc.text(`Closing Balance: Rs. ${this.cashbookClosingBalance}`, 14, finalY + 10);
 
-    doc.save(`CashBook_${this.cashbookDate}.pdf`);
+    const filename = `CashBook_${this.cashbookDate}.pdf`;
+    const base64Str = btoa(doc.output());
+    this.downloadFileToDevice(base64Str, filename, 'application/pdf');
   }
 
   loadDashboardStats() {
@@ -713,13 +731,19 @@ export class AdminDashboardPage implements OnInit {
 
   selectTab(tab: 'dashboard' | 'users' | 'customers' | 'loans' | 'collection' | 'total-collections' | 'reports' | 'investments' | 'expenses' | 'withdrawals' | 'cashbook' | 'defaulters') {
     this.activeTab = tab;
-    this.menuCtrl.close();
+    this.menuCtrl.close('main-menu');
     
     if (tab === 'reports') {
       setTimeout(() => {
         this.generateCharts();
       }, 300);
+    } else if (tab === 'cashbook') {
+      this.loadCashbook();
     }
+  }
+
+  closeMenu() {
+    this.menuCtrl.close('main-menu');
   }
 
   async recordWithdrawal() {
@@ -1056,8 +1080,8 @@ export class AdminDashboardPage implements OnInit {
 
     try {
       const position: any = await Promise.race([
-        Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 5000 }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Location timeout')), 5500))
+        Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 15000 }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Location timeout')), 15500))
       ]);
       latitude = position.coords.latitude;
       longitude = position.coords.longitude;
@@ -1075,8 +1099,26 @@ export class AdminDashboardPage implements OnInit {
       next: async () => {
         loader.dismiss();
         this.isEditLoanOpen = false;
+        const newStatus = payload.status;
+        const loanUuid = this.selectedLoanForManage.uuid;
         this.loadData();
         this.showToast('Loan details updated successfully', 'success');
+
+        if (newStatus === 'closed') {
+          this.selectedLoanTab = 'cleared';
+          this.highlightedLoanUuid = loanUuid;
+          setTimeout(() => {
+            const el = document.getElementById('loan-card-' + loanUuid);
+            if (el) {
+              el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+          }, 300);
+          setTimeout(() => {
+            if (this.highlightedLoanUuid === loanUuid) {
+              this.highlightedLoanUuid = null;
+            }
+          }, 3000);
+        }
       },
       error: async (err) => {
         loader.dismiss();
@@ -1148,6 +1190,17 @@ export class AdminDashboardPage implements OnInit {
 
   getActiveLoansList(): any[] {
     const list = this.loans.filter(l => l.status === 'active');
+    
+    list.sort((a, b) => {
+      const balA = this.getLoanBalance(a) <= 0 ? 0 : 1;
+      const balB = this.getLoanBalance(b) <= 0 ? 0 : 1;
+      if (balA !== balB) return balA - balB; // 0 balance comes first
+      
+      const tA = a.created_at ? new Date(a.created_at.toString().replace(' ', 'T')).getTime() : 0;
+      const tB = b.created_at ? new Date(b.created_at.toString().replace(' ', 'T')).getTime() : 0;
+      return tB - tA; // Then newest first
+    });
+
     if (!this.directoryLoanSearchQuery) return list;
     const q = this.directoryLoanSearchQuery.toLowerCase();
     return list.filter(l => 
@@ -1157,6 +1210,11 @@ export class AdminDashboardPage implements OnInit {
 
   getClosedLoansList(): any[] {
     const list = this.loans.filter(l => l.status === 'closed');
+    list.sort((a, b) => {
+      const tA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+      const tB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+      return tB - tA;
+    });
     if (!this.directoryLoanSearchQuery) return list;
     const q = this.directoryLoanSearchQuery.toLowerCase();
     return list.filter(l => 
@@ -1251,7 +1309,7 @@ export class AdminDashboardPage implements OnInit {
     
     data.forEach(col => {
       const d = new Date(col.collection_date);
-      const dateStr = d.toLocaleDateString();
+      const dateStr = `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`;
       const timeStr = d.toLocaleTimeString();
       const amt = col.collected_amount;
       const place = col.customer_place || 'N/A';
@@ -1261,15 +1319,10 @@ export class AdminDashboardPage implements OnInit {
       csvContent += row + '\n';
     });
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
     const datePostfix = this.collectionFilterDate ? this.collectionFilterDate : 'All';
-    link.setAttribute('download', `Collections_${datePostfix}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const filename = `Collections_${datePostfix}.csv`;
+    const base64Str = btoa(unescape(encodeURIComponent(csvContent)));
+    this.downloadFileToDevice(base64Str, filename, 'text/csv');
   }
 
   exportToPdf() {
@@ -1277,9 +1330,17 @@ export class AdminDashboardPage implements OnInit {
     if (data.length === 0) return;
 
     const doc = new jsPDF();
-    const datePostfix = this.collectionFilterDate ? this.collectionFilterDate : 'All';
+    let formattedDatePostfix = 'All';
+    if (this.collectionFilterDate) {
+      const parts = this.collectionFilterDate.split('-');
+      if (parts.length === 3) {
+        formattedDatePostfix = `${parts[2]}/${parts[1]}/${parts[0]}`;
+      } else {
+        formattedDatePostfix = this.collectionFilterDate;
+      }
+    }
     
-    doc.text(`Collections - ${datePostfix}`, 14, 15);
+    doc.text(`Collections - ${formattedDatePostfix}`, 14, 15);
     
     const tableData = data.map(col => {
       const d = new Date(col.collection_date);
@@ -1291,7 +1352,7 @@ export class AdminDashboardPage implements OnInit {
         col.payment_type || 'Cash',
         col.receipt_no,
         place,
-        `${d.toLocaleDateString()} ${d.toLocaleTimeString()}`
+        `${`${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`} ${d.toLocaleTimeString()}`
       ];
     });
 
@@ -1301,7 +1362,42 @@ export class AdminDashboardPage implements OnInit {
       startY: 20,
     });
 
-    doc.save(`Collections_${datePostfix}.pdf`);
+    const filename = `Collections_${formattedDatePostfix.replace(/\//g, '-')}.pdf`;
+    const base64Str = btoa(doc.output());
+    this.downloadFileToDevice(base64Str, filename, 'application/pdf');
+  }
+
+  async downloadFileToDevice(dataBase64: string, filename: string, mimeType: string) {
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const result = await Filesystem.writeFile({
+          path: filename,
+          data: dataBase64,
+          directory: Directory.Documents
+        });
+        this.showToast(`File downloaded to Documents folder: ${filename}`, 'success');
+      } catch (e) {
+        console.error('Error saving file', e);
+        this.showToast('Error saving file on device.', 'danger');
+      }
+    } else {
+      // Web fallback
+      const byteCharacters = atob(dataBase64);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: mimeType });
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
   }
 
   getLoanTotalPaid(loanUuid: string): number {
@@ -1366,8 +1462,8 @@ export class AdminDashboardPage implements OnInit {
 
     try {
       const position: any = await Promise.race([
-        Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 5000 }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Location timeout')), 5500))
+        Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 15000 }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Location timeout')), 15500))
       ]);
       rawForm.latitude = position.coords.latitude;
       rawForm.longitude = position.coords.longitude;
@@ -1488,12 +1584,14 @@ export class AdminDashboardPage implements OnInit {
   async toggleStatus(employee: any) {
     const newStatus = employee.status === 'active' ? 'disabled' : 'active';
     const alert = await this.alertCtrl.create({
-      header: 'Update Status',
-      message: `Are you sure you want to set ${employee.name} as ${newStatus}?`,
+      header: newStatus === 'active' ? 'Activate Employee' : 'Disable Employee',
+      message: `Are you sure you want to ${newStatus} ${employee.name}?`,
+      cssClass: 'custom-glass-alert',
       buttons: [
         { text: 'Cancel', role: 'cancel' },
         {
-          text: 'Confirm',
+          text: newStatus === 'active' ? 'Activate' : 'Disable',
+          role: newStatus === 'active' ? 'confirm' : 'destructive',
           handler: () => {
             this.apiService.toggleEmployeeStatus(employee.uuid, newStatus).subscribe({
               next: async () => {
@@ -1656,14 +1754,33 @@ export class AdminDashboardPage implements OnInit {
     const payload = this.editCollectionForm.value;
     
     const loader = await this.loadingCtrl.create({
-      message: 'Updating collection...',
+      message: 'Fetching location & updating...',
       spinner: 'crescent'
     });
     await loader.present();
 
+    let latitude = null;
+    let longitude = null;
+    try {
+      const position: any = await Promise.race([
+        Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 5000 }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Location timeout')), 5500))
+      ]);
+      latitude = position.coords.latitude;
+      longitude = position.coords.longitude;
+    } catch (err) {
+      console.warn('Could not fetch location during collection edit:', err);
+    }
+
+    const finalPayload = {
+      ...payload,
+      latitude,
+      longitude
+    };
+
     const actuallyOnline = await this.syncService.checkActualConnection();
     if (actuallyOnline) {
-      this.apiService.updateCollection(this.selectedEditCollection.uuid, payload).subscribe({
+      this.apiService.updateCollection(this.selectedEditCollection.uuid, finalPayload).subscribe({
         next: async () => {
           loader.dismiss();
           this.showToast('Collection updated successfully', 'success');
@@ -1713,6 +1830,7 @@ export class AdminDashboardPage implements OnInit {
           next: (res) => this.allExpenses = res
         });
         this.loadDashboardStats();
+        if (this.cashbookDate) this.loadCashbook();
       },
       error: async (err) => {
         loader.dismiss();
@@ -1739,6 +1857,7 @@ export class AdminDashboardPage implements OnInit {
         this.apiService.getInvestments().subscribe({
           next: (res) => this.investments = res
         });
+        if (this.cashbookDate) this.loadCashbook();
       },
       error: async (err) => {
         loader.dismiss();
@@ -1775,6 +1894,7 @@ export class AdminDashboardPage implements OnInit {
         this.closeEditExpenseModal();
         this.apiService.getAllExpenses().subscribe({ next: (res) => this.allExpenses = res });
         this.loadDashboardStats();
+        if (this.cashbookDate) this.loadCashbook();
       },
       error: async (err) => {
         loader.dismiss();
@@ -1787,6 +1907,7 @@ export class AdminDashboardPage implements OnInit {
     const alert = await this.alertCtrl.create({
       header: 'Confirm Delete',
       message: 'Are you sure you want to delete this expense? This action cannot be undone.',
+      cssClass: 'custom-glass-alert',
       buttons: [
         { text: 'Cancel', role: 'cancel' },
         {
@@ -1802,6 +1923,7 @@ export class AdminDashboardPage implements OnInit {
                 this.showToast('Expense deleted successfully', 'success');
                 this.apiService.getAllExpenses().subscribe({ next: (res) => this.allExpenses = res });
                 this.loadDashboardStats();
+                if (this.cashbookDate) this.loadCashbook();
               },
               error: async (err) => {
                 loader.dismiss();
@@ -1843,6 +1965,7 @@ export class AdminDashboardPage implements OnInit {
         this.closeEditInvestmentModal();
         this.apiService.getInvestments().subscribe({ next: (res) => this.investments = res });
         this.loadDashboardStats();
+        if (this.cashbookDate) this.loadCashbook();
       },
       error: async (err) => {
         loader.dismiss();

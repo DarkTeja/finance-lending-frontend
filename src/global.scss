@@ -90,3 +90,13 @@
   }
 }
 
+/* Enable smooth scrolling across the entire app */
+html, body {
+  scroll-behavior: smooth;
+}
+
+ion-content {
+  /* Enforce native momentum scrolling on iOS */
+  -webkit-overflow-scrolling: touch !important;
+}
+

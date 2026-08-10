@@ -1,8 +1,8 @@
 <ion-split-pane contentId="emp-content" when="md">
   <!-- Left Sidebar (Sliding Menu) -->
-  <ion-menu menuId="emp-menu" contentId="emp-content" type="overlay">
+  <ion-menu menuId="emp-menu" contentId="emp-content" type="overlay" style="--width: 260px;">
     <ion-content class="sidebar-bg">
-      <div class="brand-rectangle">
+      <div class="brand-rectangle" style="margin-top: calc(24px + var(--ion-safe-area-top, 30px));">
         <div class="brand-icon">
           <ion-icon name="layers"></ion-icon>
         </div>
@@ -45,21 +45,22 @@
         </ion-item>
       </ion-list>
     </ion-content>
-
-
   </ion-menu>
 
   <!-- Main View Area -->
   <div class="ion-page" id="emp-content">
     <ion-header class="ion-no-border glass-header">
       <ion-toolbar>
-        <ion-buttons slot="start">
-          <ion-menu-button menu="emp-menu" color="primary"></ion-menu-button>
-        </ion-buttons>
-        <ion-title style="background: linear-gradient(135deg, #1e3a8a, #3b82f6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 800; font-size: 22px; padding-left: 8px;">Welcome back, {{ currentUser?.name || 'Employee' }}</ion-title>
-        <ion-buttons slot="end">
-          <button id="emp-profile-trigger" style="background: transparent; border: none; padding: 0; margin-right: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; outline: none; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-            <div style="width: 42px; height: 42px; border-radius: 50%; background: linear-gradient(135deg, #1e3a8a, #3b82f6); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(30, 58, 138, 0.2); color: white; font-weight: 700; font-size: 18px; border: 2.5px solid white;">
+        <div style="display: flex; align-items: center; width: 100%; justify-content: space-between; padding: 0 10px;">
+          <div style="display: flex; align-items: center; min-width: 0;">
+            <ion-menu-button menu="emp-menu" color="primary" style="margin-right: 8px; z-index: 10;"></ion-menu-button>
+            <h1 style="margin: 0; background: linear-gradient(135deg, #1e3a8a, #3b82f6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 800; font-size: clamp(16px, 5vw, 22px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+              Welcome, {{ currentUser?.name || 'Employee' }}
+            </h1>
+          </div>
+          
+          <button id="emp-profile-trigger" style="flex-shrink: 0; background: transparent; border: none; padding: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; outline: none; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+            <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #1e3a8a, #3b82f6); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(30, 58, 138, 0.2); color: white; font-weight: 700; font-size: 18px; border: 2.5px solid white;">
               {{ (currentUser?.name || 'E')[0] | uppercase }}
             </div>
           </button>
@@ -84,7 +85,7 @@
               </ion-content>
             </ng-template>
           </ion-popover>
-        </ion-buttons>
+        </div>
       </ion-toolbar>
     </ion-header>
 
@@ -405,22 +406,25 @@
                     <span class="amt">₹{{ col.collected_amount }}</span>
                   </div>
                   <p class="details">{{ col.customer_name }} ({{ col.accno }})</p>
-                  <p class="meta" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                    <span>By: {{ col.collected_by_name || currentUser?.name }}</span>
-                    <span>• {{ col.collection_date | date:'short' }}</span>
-                    
-                    <span style="display: inline-flex; align-items: center; gap: 4px;">
-                      <ion-icon [name]="col.payment_type === 'Online' ? 'phone-portrait-outline' : 'cash-outline'"></ion-icon> {{ col.payment_type || 'Cash' }}
-                    </span>
-                    
-                    <span style="display: inline-flex; width: 50px;">
-                      <a *ngIf="col.latitude && col.longitude" [href]="'https://www.google.com/maps?q=' + col.latitude + ',' + col.longitude" target="_blank" style="color: #3b82f6; text-decoration: none; display: inline-flex; align-items: center; gap: 2px;">
-                        <ion-icon name="location-outline"></ion-icon> Map
-                      </a>
-                    </span>
-                    
-                    <span class="badge" *ngIf="col.sync_status" [ngClass]="{'pending': col.sync_status === 'Pending'}">
-                      {{ col.sync_status }}
+                  <p class="meta" style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start; margin-top: 6px;">
+                    <span style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; width: 100%; gap: 8px;">
+                      <span style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                        <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 130px;">By: {{ col.collected_by_name || currentUser?.name }}</span>
+                        <span style="white-space: nowrap;">• {{ col.collection_date | date:'dd/MM/yyyy, h:mm a' }}</span>
+                      </span>
+                      <span style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                        <span style="display: inline-flex; align-items: center; gap: 4px;">
+                          <ion-icon [name]="col.payment_type === 'Online' ? 'phone-portrait-outline' : 'cash-outline'"></ion-icon> {{ col.payment_type || 'Cash' }}
+                        </span>
+                        <span style="display: inline-flex;">
+                          <a *ngIf="col.latitude && col.longitude" [href]="'https://www.google.com/maps?q=' + col.latitude + ',' + col.longitude" target="_blank" style="color: #3b82f6; text-decoration: none; display: inline-flex; align-items: center; gap: 2px;">
+                            <ion-icon name="location-outline"></ion-icon> Map
+                          </a>
+                        </span>
+                        <span class="badge" *ngIf="col.sync_status" [ngClass]="{'pending': col.sync_status === 'Pending'}">
+                          {{ col.sync_status }}
+                        </span>
+                      </span>
                     </span>
                   </p>
                 </div>
@@ -447,7 +451,7 @@
                 <div style="width: 1px; height: 24px; background: rgba(255,255,255,0.1); margin: 0 4px;"></div>
                 <button class="action-btn" id="emp-open-date-picker" style="background: rgba(255, 255, 255, 0.6); color: #1e293b; border: 1px solid rgba(255, 255, 255, 0.8);">
                   <ion-icon name="calendar-outline" slot="start"></ion-icon> 
-                  {{ collectionFilterDate ? (collectionFilterDate | date:'mediumDate') : 'Select Date' }}
+                  {{ collectionFilterDate ? (collectionFilterDate | date:'dd/MM/yyyy') : 'Select Date' }}
                 </button>
                 <ion-modal trigger="emp-open-date-picker" [initialBreakpoint]="0.6" [breakpoints]="[0, 0.6]">
                   <ng-template>
@@ -497,7 +501,7 @@
                 <p class="details">{{ col.customer_name }} ({{ col.accno }})</p>
                 <p class="meta" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                   <span>By: {{ col.collected_by_name || currentUser?.name }}</span>
-                  <span>• {{ col.collection_date | date:'short' }}</span>
+                  <span>• {{ col.collection_date | date:'dd/MM/yyyy, h:mm a' }}</span>
                   
                   <span style="display: inline-flex; align-items: center; gap: 4px;">
                     <ion-icon [name]="col.payment_type === 'Online' ? 'phone-portrait-outline' : 'cash-outline'"></ion-icon> {{ col.payment_type || 'Cash' }}
@@ -669,7 +673,7 @@
                     
                     <div *ngFor="let payment of getLoanHistory(selectedDetailedLoan.uuid)" class="history-item">
                       <div>
-                        <div class="hist-date">{{ payment.collection_date | date:'medium' }}</div>
+                        <div class="hist-date">{{ payment.collection_date | date:'dd/MM/yyyy, h:mm a' }}</div>
                         <div class="hist-by">
                           By: {{ payment.collected_by_name || 'System' }} • 
                           <ion-icon [name]="payment.payment_type === 'Online' ? 'phone-portrait-outline' : 'cash-outline'"></ion-icon> {{ payment.payment_type || 'Cash' }}
@@ -766,7 +770,7 @@
                   Acc: <strong style="color: #334155;">{{ loan.accno }}</strong>
                 </p>
                 <p style="margin: 0; font-size: 11px; color: #94a3b8;">
-                  Last Paid: <strong style="color: #64748b;">{{ loan.last_paid_date ? (loan.last_paid_date | date:'mediumDate') : 'Never' }}</strong>
+                  Last Paid: <strong style="color: #64748b;">{{ loan.last_paid_date ? (loan.last_paid_date | date:'dd/MM/yyyy') : 'Never' }}</strong>
                 </p>
               </div>
             

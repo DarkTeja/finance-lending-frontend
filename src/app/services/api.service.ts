@@ -8,6 +8,7 @@ import { Observable } from 'rxjs';
 export class ApiService {
   // Use host PC local network IP so mobile browser can connect
   private readonly baseUrl = 'http://3.108.58.194';
+  // private readonly baseUrl = 'http://192.168.1.45:3000';
 
   constructor(private http: HttpClient) {}
 
@@ -43,6 +44,10 @@ export class ApiService {
   // --- Notifications ---
   registerPushToken(token: string): Observable<any> {
     return this.http.post(`${this.baseUrl}/notifications/token`, { token }, { headers: this.getHeaders() });
+  }
+
+  unregisterPushToken(): Observable<any> {
+    return this.http.delete(`${this.baseUrl}/notifications/token`, { headers: this.getHeaders() });
   }
 
   // --- Employees ---

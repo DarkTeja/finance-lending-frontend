@@ -23,9 +23,14 @@
 
         <div class="input-group">
           <label>Password</label>
-          <div class="input-wrapper">
+          <div class="input-wrapper" style="position: relative;">
             <ion-icon name="lock-closed-outline"></ion-icon>
-            <input type="password" formControlName="password" placeholder="Enter password..." />
+            <input [type]="showPassword ? 'text' : 'password'" formControlName="password" placeholder="Enter password..." style="padding-right: 40px;" />
+            <ion-icon 
+              [name]="showPassword ? 'eye-off-outline' : 'eye-outline'" 
+              (click)="showPassword = !showPassword" 
+              style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #64748b;">
+            </ion-icon>
           </div>
         </div>
 

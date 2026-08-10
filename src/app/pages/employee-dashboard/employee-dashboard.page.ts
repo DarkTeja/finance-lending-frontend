@@ -297,16 +297,26 @@ export class EmployeeDashboardPage implements OnInit {
   loadData() {
     this.apiService.getCustomers().subscribe({
       next: async (res) => {
-        this.customers = res;
-        this.filteredCustomersForLoan = [...res];
+        const sorted = res.sort((a: any, b: any) => {
+          const tA = a.created_at ? new Date(a.created_at).getTime() : Date.now();
+          const tB = b.created_at ? new Date(b.created_at).getTime() : Date.now();
+          return tB - tA;
+        });
+        this.customers = sorted;
+        this.filteredCustomersForLoan = [...sorted];
         const syncedCustomers = res.map((c: any) => ({ ...c, sync_status: 'Synced' }));
         await this.dbService.setCustomers(syncedCustomers);
       },
       error: async (err) => {
         console.error('Error loading customers from server, falling back to local DB:', err);
         const cached = await this.dbService.getCustomers();
-        this.customers = cached;
-        this.filteredCustomersForLoan = [...cached];
+        const sorted = cached.sort((a: any, b: any) => {
+          const tA = a.created_at ? new Date(a.created_at).getTime() : Date.now();
+          const tB = b.created_at ? new Date(b.created_at).getTime() : Date.now();
+          return tB - tA;
+        });
+        this.customers = sorted;
+        this.filteredCustomersForLoan = [...sorted];
       }
     });
 
@@ -346,7 +356,11 @@ export class EmployeeDashboardPage implements OnInit {
 
   selectTab(tab: 'dashboard' | 'customers' | 'loans' | 'collection' | 'total-collections' | 'defaulters') {
     this.activeTab = tab;
-    this.menuCtrl.close();
+    this.menuCtrl.close('emp-menu');
+  }
+
+  closeMenu() {
+    this.menuCtrl.close('emp-menu');
   }
 
   // --- Account Numbers Grid Navigation ---
@@ -398,6 +412,17 @@ export class EmployeeDashboardPage implements OnInit {
 
   getActiveLoansList(): any[] {
     const list = this.loans.filter(l => l.status === 'active');
+    
+    list.sort((a, b) => {
+      const balA = this.getLoanBalance(a) <= 0 ? 0 : 1;
+      const balB = this.getLoanBalance(b) <= 0 ? 0 : 1;
+      if (balA !== balB) return balA - balB; // 0 balance comes first
+      
+      const tA = a.created_at ? new Date(a.created_at.toString().replace(' ', 'T')).getTime() : 0;
+      const tB = b.created_at ? new Date(b.created_at.toString().replace(' ', 'T')).getTime() : 0;
+      return tB - tA; // Then newest first
+    });
+
     if (!this.directoryLoanSearchQuery) return list;
     const q = this.directoryLoanSearchQuery.toLowerCase();
     return list.filter(l => 
@@ -407,6 +432,11 @@ export class EmployeeDashboardPage implements OnInit {
 
   getClosedLoansList(): any[] {
     const list = this.loans.filter(l => l.status === 'closed');
+    list.sort((a, b) => {
+      const tA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+      const tB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+      return tB - tA;
+    });
     if (!this.directoryLoanSearchQuery) return list;
     const q = this.directoryLoanSearchQuery.toLowerCase();
     return list.filter(l => 
@@ -488,8 +518,8 @@ export class EmployeeDashboardPage implements OnInit {
 
     try {
       const position: any = await Promise.race([
-        Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 5000 }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Location timeout')), 5500))
+        Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 15000 }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Location timeout')), 15500))
       ]);
       rawForm.latitude = position.coords.latitude;
       rawForm.longitude = position.coords.longitude;
@@ -687,7 +717,7 @@ export class EmployeeDashboardPage implements OnInit {
     
     data.forEach(col => {
       const d = new Date(col.collection_date);
-      const dateStr = d.toLocaleDateString();
+      const dateStr = `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`;
       const timeStr = d.toLocaleTimeString();
       const amt = col.collected_amount;
       const place = col.customer_place || 'N/A';
@@ -713,9 +743,17 @@ export class EmployeeDashboardPage implements OnInit {
     if (data.length === 0) return;
 
     const doc = new jsPDF();
-    const datePostfix = this.collectionFilterDate ? this.collectionFilterDate : 'All';
+    let formattedDatePostfix = 'All';
+    if (this.collectionFilterDate) {
+      const parts = this.collectionFilterDate.split('-');
+      if (parts.length === 3) {
+        formattedDatePostfix = `${parts[2]}/${parts[1]}/${parts[0]}`;
+      } else {
+        formattedDatePostfix = this.collectionFilterDate;
+      }
+    }
     
-    doc.text(`Collections - ${datePostfix}`, 14, 15);
+    doc.text(`Collections - ${formattedDatePostfix}`, 14, 15);
     
     const tableData = data.map(col => {
       const d = new Date(col.collection_date);
@@ -727,7 +765,7 @@ export class EmployeeDashboardPage implements OnInit {
         col.payment_type || 'Cash',
         col.receipt_no,
         place,
-        `${d.toLocaleDateString()} ${d.toLocaleTimeString()}`
+        `${`${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`} ${d.toLocaleTimeString()}`
       ];
     });
 
@@ -737,7 +775,7 @@ export class EmployeeDashboardPage implements OnInit {
       startY: 20,
     });
 
-    doc.save(`Collections_${datePostfix}.pdf`);
+    doc.save(`Collections_${formattedDatePostfix.replace(/\//g, '-')}.pdf`);
   }
 
   openAddExpenseModal() {
