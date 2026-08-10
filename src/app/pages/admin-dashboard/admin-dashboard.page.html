@@ -1,6 +1,6 @@
 <ion-split-pane contentId="main-content" when="md">
   <!-- Left Sidebar (Sliding Menu) -->
-  <ion-menu menuId="main-menu" contentId="main-content" type="overlay" style="--width: 260px;">
+  <ion-menu menuId="main-menu" contentId="main-content" type="overlay" swipeGesture="false" style="--width: 260px;">
     <ion-content class="sidebar-bg">
       <div class="brand-rectangle" style="margin-top: calc(24px + var(--ion-safe-area-top, 30px));">
         <div class="brand-icon">
@@ -693,16 +693,16 @@
             </div>
             
             <!-- Overall Total Card -->
-            <div *ngIf="getAllCollectionsSorted().length > 0" style="padding: 16px; display: flex; justify-content: center; width: 100%;">
+            <div *ngIf="cachedAllCollectionsSorted.length > 0" style="padding: 16px; display: flex; justify-content: center; width: 100%;">
               <div style="background: rgba(255, 255, 255, 0.75); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.5); padding: 20px 40px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05); text-align: center;">
                 <p style="margin: 0 0 8px 0; font-size: 14px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1px;">Overall Total Collected</p>
-                <h3 style="margin: 0; font-size: 36px; font-weight: 800; background: linear-gradient(135deg, #10b981, #059669); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">₹{{ getTotalFilteredCollectionAmount() }}</h3>
+                <h3 style="margin: 0; font-size: 36px; font-weight: 800; background: linear-gradient(135deg, #10b981, #059669); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">₹{{ cachedTotalFilteredCollectionAmount }}</h3>
               </div>
             </div>
 
             <!-- Employee Summary Card -->
-            <div *ngIf="getAllCollectionsSorted().length > 0" class="summary-cards-container" style="display: flex; gap: 12px; overflow-x: auto; padding: 16px; background: rgba(255,255,255,0.6); box-shadow: inset 0 2px 4px rgba(0,0,0,0.02); border-bottom: 1px solid rgba(255,255,255,0.05); margin-bottom: 16px;">
-              <div *ngFor="let sum of getEmployeeCollectionSummary()" style="background: rgba(255, 255, 255, 0.6); padding: 12px 16px; border-radius: 12px; min-width: 170px; border: 1px solid rgba(255, 255, 255, 0.8);">
+            <div *ngIf="cachedAllCollectionsSorted.length > 0" class="summary-cards-container" style="display: flex; gap: 12px; overflow-x: auto; padding: 16px; background: rgba(255,255,255,0.6); box-shadow: inset 0 2px 4px rgba(0,0,0,0.02); border-bottom: 1px solid rgba(255,255,255,0.05); margin-bottom: 16px;">
+              <div *ngFor="let sum of cachedEmployeeCollectionSummary" style="background: rgba(255, 255, 255, 0.6); padding: 12px 16px; border-radius: 12px; min-width: 170px; border: 1px solid rgba(255, 255, 255, 0.8);">
                 <p style="margin: 0 0 4px 0; font-size: 13px; color: #94a3b8; font-weight: 600; text-transform: uppercase;">{{ sum.name }} <span style="text-transform: none; font-size: 11px; opacity: 0.8;">({{ sum.count }} Customers)</span></p>
                 <h4 style="margin: 0; color: #10b981; font-size: 18px;">₹{{ sum.total }}</h4>
                 <div style="margin-top: 6px; padding-top: 6px; border-top: 1px dashed rgba(0,0,0,0.05); display: flex; justify-content: space-between; font-size: 11px; font-weight: 600; color: #64748b;">
@@ -713,12 +713,12 @@
             </div>
 
             <div class="collection-logs" style="max-width: 800px; margin: 0 auto;">
-              <div *ngIf="getAllCollectionsSorted().length === 0" class="empty-state" style="padding: 40px;">
+              <div *ngIf="cachedAllCollectionsSorted.length === 0" class="empty-state" style="padding: 40px;">
                 <ion-icon name="receipt-outline"></ion-icon>
                 <p>No collections recorded yet.</p>
               </div>
 
-              <div *ngFor="let col of getAllCollectionsSorted() | slice:0:totalCollectionsDisplayLimit" class="col-log-card">
+              <div *ngFor="let col of cachedAllCollectionsSorted | slice:0:totalCollectionsDisplayLimit" class="col-log-card">
                 <div class="col-log-header">
                   <span class="rcpt">
                     {{ col.receipt_no || 'Pending Sync' }}
@@ -942,12 +942,12 @@
             </div>
             
             <div class="collection-logs" style="max-width: 800px; margin: 0 auto; padding-top: 16px;">
-              <div *ngIf="getFilteredExpenses().length === 0" class="empty-state" style="padding: 40px;">
+              <div *ngIf="cachedFilteredExpenses.length === 0" class="empty-state" style="padding: 40px;">
                 <ion-icon name="receipt-outline"></ion-icon>
                 <p>No expenses recorded for selected date.</p>
               </div>
 
-              <div *ngFor="let exp of getFilteredExpenses()" class="col-log-card" style="border-left: 4px solid #e74c3c;">
+              <div *ngFor="let exp of cachedFilteredExpenses" class="col-log-card" style="border-left: 4px solid #e74c3c;">
                 <div class="col-log-header">
                   <span class="rcpt">
                     {{ exp.reason }}

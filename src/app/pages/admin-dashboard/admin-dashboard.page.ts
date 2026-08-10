@@ -29,7 +29,7 @@ export class AdminDashboardPage implements OnInit {
   employees: any[] = [];
   customers: any[] = [];
   loans: any[] = [];
-  
+
   activeTab: 'dashboard' | 'users' | 'customers' | 'loans' | 'collection' | 'total-collections' | 'reports' | 'investments' | 'expenses' | 'withdrawals' | 'cashbook' | 'defaulters' = 'dashboard';
 
   isProfileMenuOpen = false;
@@ -40,10 +40,10 @@ export class AdminDashboardPage implements OnInit {
   isEditInvestmentOpen = false;
   selectedInvestmentForEdit: any = null;
 
-  dashboardStats: any = { 
-    today_collection: 0, 
-    bf_cash: 0, 
-    receivable_amount: 0, 
+  dashboardStats: any = {
+    today_collection: 0,
+    bf_cash: 0,
+    receivable_amount: 0,
     extra_amount: 0,
     interests: 0,
     total_investments: 0,
@@ -68,7 +68,7 @@ export class AdminDashboardPage implements OnInit {
     { id: 'col', title: 'Total Collected', color: '#8b5cf6', key: 'total_collections_all_time', size: 'half', hidden: false },
     { id: 'turn', title: 'Turnover (Disbursed + Collected)', color: '#06b6d4', key: 'all_time_turnover', size: 'half', hidden: false }
   ];
-  
+
   expenseForm!: FormGroup;
   editExpenseForm!: FormGroup;
   isAddExpenseOpen = false;
@@ -94,10 +94,10 @@ export class AdminDashboardPage implements OnInit {
     const now = new Date();
     return this.loans.filter(loan => {
       if (loan.status !== 'active') return false;
-      
+
       const loanCollections = this.collections.filter(c => c.loan_uuid === loan.uuid);
       let lastDate: Date;
-      
+
       if (loanCollections.length > 0) {
         // Find most recent collection
         loanCollections.sort((a, b) => new Date(b.collection_date).getTime() - new Date(a.collection_date).getTime());
@@ -107,10 +107,10 @@ export class AdminDashboardPage implements OnInit {
         lastDate = new Date(loan.created_at);
         loan.last_paid_date = null;
       }
-      
+
       const diffTime = Math.abs(now.getTime() - lastDate.getTime());
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      
+
       // If it's more than threshold days ago, they are a defaulter
       return diffDays > this.defaultersDaysThreshold;
     });
@@ -134,7 +134,7 @@ export class AdminDashboardPage implements OnInit {
     } else if (listType === 'totalCollections') {
       this.totalCollectionsDisplayLimit += 20;
     }
-    
+
     // Complete the infinite scroll event
     if (event && event.target) {
       event.target.complete();
@@ -173,7 +173,7 @@ export class AdminDashboardPage implements OnInit {
   selectedEmployeeForPermissions: any = null;
   selectedCustomerForManage: any = null;
   selectedLoanForManage: any = null;
-  
+
   // Search and Select variables for Loan Form
   customerSearchQuery = '';
   filteredCustomersForLoan: any[] = [];
@@ -294,7 +294,7 @@ export class AdminDashboardPage implements OnInit {
     const metric = this.metricsConfig.find(m => m.id === metricId);
     if (metric) {
       metric.size = metric.size === 'full' ? 'half' : 'full';
-      
+
       const sizes: any = {};
       this.metricsConfig.forEach(m => {
         sizes[m.id] = m.size;
@@ -307,7 +307,7 @@ export class AdminDashboardPage implements OnInit {
     const metric = this.metricsConfig.find(m => m.id === metricId);
     if (metric) {
       metric.hidden = !metric.hidden;
-      
+
       const hiddenState: any = {};
       this.metricsConfig.forEach(m => {
         if (m.hidden) hiddenState[m.id] = true;
@@ -611,6 +611,11 @@ export class AdminDashboardPage implements OnInit {
 
     this.loadDashboardStats();
     this.loadCashbook();
+    
+    // Update caches after loading data
+    setTimeout(() => {
+      this.updateCachedCalculations();
+    }, 500);
   }
 
   loadCashbook() {
@@ -636,7 +641,7 @@ export class AdminDashboardPage implements OnInit {
   calculateCashbookClosingBalance() {
     if (!this.cashbookData) return;
     let balance = parseFloat(this.cashbookData.opening_balance) || 0;
-    
+
     if (this.cashbookData.transactions && this.cashbookData.transactions.length > 0) {
       for (const tx of this.cashbookData.transactions) {
         const amount = parseFloat(tx.amount) || 0;
@@ -654,10 +659,10 @@ export class AdminDashboardPage implements OnInit {
     if (!this.cashbookData) return;
 
     const doc = new jsPDF();
-    
+
     doc.setFontSize(16);
     doc.text(`Cash Book / Ledger`, 14, 15);
-    
+
     const cbDateObj = new Date(this.cashbookDate);
     const formattedCbDate = `${cbDateObj.getDate().toString().padStart(2, '0')}/${(cbDateObj.getMonth() + 1).toString().padStart(2, '0')}/${cbDateObj.getFullYear()}`;
 
@@ -666,15 +671,15 @@ export class AdminDashboardPage implements OnInit {
     doc.text(`Opening Balance: Rs. ${this.cashbookData.opening_balance}`, 14, 29);
 
     const tableData = [];
-    
+
     if (this.cashbookData.transactions && this.cashbookData.transactions.length > 0) {
       for (const tx of this.cashbookData.transactions) {
         const type = tx.type.charAt(0).toUpperCase() + tx.type.slice(1);
         const inflowOutflow = (tx.type === 'collection' || tx.type === 'investment') ? 'Inflow' : 'Outflow';
         const amountStr = `${inflowOutflow === 'Inflow' ? '+' : '-'} Rs. ${tx.amount}`;
-        
+
         tableData.push([
-          new Date(tx.tx_date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+          new Date(tx.tx_date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           type,
           tx.description,
           amountStr
@@ -704,7 +709,7 @@ export class AdminDashboardPage implements OnInit {
     this.apiService.getDashboardStats(this.dashboardFilterRange).subscribe({
       next: (res) => {
         this.dashboardStats = res;
-        
+
         // Dynamic mappings for filtering
         if (res.filtered_loans_given !== undefined) {
           this.dashboardStats['total_loans_given'] = res.filtered_loans_given;
@@ -729,17 +734,33 @@ export class AdminDashboardPage implements OnInit {
     });
   }
 
+  isSwitchingTab: boolean = false;
+
   selectTab(tab: 'dashboard' | 'users' | 'customers' | 'loans' | 'collection' | 'total-collections' | 'reports' | 'investments' | 'expenses' | 'withdrawals' | 'cashbook' | 'defaulters') {
-    this.activeTab = tab;
-    this.menuCtrl.close('main-menu');
-    
-    if (tab === 'reports') {
-      setTimeout(() => {
-        this.generateCharts();
-      }, 300);
-    } else if (tab === 'cashbook') {
-      this.loadCashbook();
-    }
+    if (this.isSwitchingTab) return;
+    this.isSwitchingTab = true;
+
+    // Close the menu first to ensure smooth 60fps animation
+    this.menuCtrl.close('main-menu').then(() => {
+      // Change the heavy DOM tab only AFTER the menu is completely closed
+      this.activeTab = tab;
+      this.updateCachedCalculations(); // Update caches when switching tabs
+      
+      if (tab === 'reports') {
+        setTimeout(() => {
+          this.generateCharts();
+        }, 100);
+      } else if (tab === 'cashbook') {
+        this.loadCashbook();
+      }
+
+      this.isSwitchingTab = false;
+    }).catch(() => {
+      // Failsafe if animation aborts
+      this.activeTab = tab;
+      this.updateCachedCalculations();
+      this.isSwitchingTab = false;
+    });
   }
 
   closeMenu() {
@@ -806,7 +827,7 @@ export class AdminDashboardPage implements OnInit {
   }
 
   private charts: any = {};
-  
+
   generateCharts() {
     if (this.charts['collectionsTrend']) this.charts['collectionsTrend'].destroy();
     if (this.charts['loanStatus']) this.charts['loanStatus'].destroy();
@@ -815,7 +836,7 @@ export class AdminDashboardPage implements OnInit {
     // 1. Collections Trend (Last 30 Days)
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    
+
     const dailyCollections: any = {};
     this.collections.forEach(col => {
       const d = new Date(col.collection_date);
@@ -1162,6 +1183,19 @@ export class AdminDashboardPage implements OnInit {
   directoryLoanSearchQuery = '';
   directoryEmployeeSearchQuery = '';
 
+  // Cached calculated arrays to prevent UI freezing
+  cachedAllCollectionsSorted: any[] = [];
+  cachedEmployeeCollectionSummary: any[] = [];
+  cachedFilteredExpenses: any[] = [];
+  cachedTotalFilteredCollectionAmount: number = 0;
+  
+  updateCachedCalculations() {
+    this.cachedAllCollectionsSorted = this.getAllCollectionsSorted();
+    this.cachedEmployeeCollectionSummary = this.getEmployeeCollectionSummary();
+    this.cachedFilteredExpenses = this.getFilteredExpenses();
+    this.cachedTotalFilteredCollectionAmount = this.getTotalFilteredCollectionAmount();
+  }
+
   getActiveLoansCountForCustomer(customerUuid: string): number {
     return this.loans.filter(l => l.customer_uuid === customerUuid && l.status === 'active').length;
   }
@@ -1175,7 +1209,7 @@ export class AdminDashboardPage implements OnInit {
   getFilteredCustomers(): any[] {
     if (!this.directoryCustomerSearchQuery) return this.customers;
     const q = this.directoryCustomerSearchQuery.toLowerCase();
-    return this.customers.filter(c => 
+    return this.customers.filter(c =>
       c.name.toLowerCase().includes(q) || c.place.toLowerCase().includes(q)
     );
   }
@@ -1183,19 +1217,19 @@ export class AdminDashboardPage implements OnInit {
   getFilteredEmployees(): any[] {
     if (!this.directoryEmployeeSearchQuery) return this.employees;
     const q = this.directoryEmployeeSearchQuery.toLowerCase();
-    return this.employees.filter(e => 
+    return this.employees.filter(e =>
       e.name.toLowerCase().includes(q) || e.username.toLowerCase().includes(q)
     );
   }
 
   getActiveLoansList(): any[] {
     const list = this.loans.filter(l => l.status === 'active');
-    
+
     list.sort((a, b) => {
       const balA = this.getLoanBalance(a) <= 0 ? 0 : 1;
       const balB = this.getLoanBalance(b) <= 0 ? 0 : 1;
       if (balA !== balB) return balA - balB; // 0 balance comes first
-      
+
       const tA = a.created_at ? new Date(a.created_at.toString().replace(' ', 'T')).getTime() : 0;
       const tB = b.created_at ? new Date(b.created_at.toString().replace(' ', 'T')).getTime() : 0;
       return tB - tA; // Then newest first
@@ -1203,7 +1237,7 @@ export class AdminDashboardPage implements OnInit {
 
     if (!this.directoryLoanSearchQuery) return list;
     const q = this.directoryLoanSearchQuery.toLowerCase();
-    return list.filter(l => 
+    return list.filter(l =>
       l.accno.toLowerCase().includes(q) || l.customer_name.toLowerCase().includes(q)
     );
   }
@@ -1217,15 +1251,15 @@ export class AdminDashboardPage implements OnInit {
     });
     if (!this.directoryLoanSearchQuery) return list;
     const q = this.directoryLoanSearchQuery.toLowerCase();
-    return list.filter(l => 
+    return list.filter(l =>
       l.accno.toLowerCase().includes(q) || l.customer_name.toLowerCase().includes(q)
     );
   }
 
   getTodayCollections(): any[] {
-    const today = new Date().setHours(0,0,0,0);
+    const today = new Date().setHours(0, 0, 0, 0);
     return this.collections.filter(c => {
-      const colDate = new Date(c.collection_date).setHours(0,0,0,0);
+      const colDate = new Date(c.collection_date).setHours(0, 0, 0, 0);
       return colDate === today;
     });
   }
@@ -1279,11 +1313,11 @@ export class AdminDashboardPage implements OnInit {
       const empName = col.collected_by_name || 'Admin';
       const amt = parseFloat(col.collected_amount) || 0;
       const type = col.payment_type || 'Cash';
-      
+
       if (!summaryMap.has(empName)) {
         summaryMap.set(empName, { count: 0, total: 0, cashTotal: 0, onlineTotal: 0 });
       }
-      
+
       const stat = summaryMap.get(empName)!;
       stat.count += 1;
       stat.total += amt;
@@ -1306,7 +1340,7 @@ export class AdminDashboardPage implements OnInit {
     if (data.length === 0) return;
 
     let csvContent = 'Account No,Name,Amount,Type,Receipt,Place,Date and Time\n';
-    
+
     data.forEach(col => {
       const d = new Date(col.collection_date);
       const dateStr = `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`;
@@ -1314,7 +1348,7 @@ export class AdminDashboardPage implements OnInit {
       const amt = col.collected_amount;
       const place = col.customer_place || 'N/A';
       const dateTimeStr = `${dateStr} ${timeStr}`;
-      
+
       const row = `"${col.accno}","${col.customer_name}","${amt}","${col.payment_type || 'Cash'}","${col.receipt_no}","${place}","${dateTimeStr}"`;
       csvContent += row + '\n';
     });
@@ -1339,9 +1373,9 @@ export class AdminDashboardPage implements OnInit {
         formattedDatePostfix = this.collectionFilterDate;
       }
     }
-    
+
     doc.text(`Collections - ${formattedDatePostfix}`, 14, 15);
-    
+
     const tableData = data.map(col => {
       const d = new Date(col.collection_date);
       const place = col.customer_place || 'N/A';
@@ -1614,7 +1648,7 @@ export class AdminDashboardPage implements OnInit {
     const query = (event.target.value || '').toLowerCase().trim();
     this.loanSearchQuery = query;
     if (query) {
-      this.filteredLoansForCollection = this.getActiveLoans().filter(l => 
+      this.filteredLoansForCollection = this.getActiveLoans().filter(l =>
         l.accno.toLowerCase().includes(query) || l.customer_name.toLowerCase().includes(query)
       );
     } else {
@@ -1627,16 +1661,16 @@ export class AdminDashboardPage implements OnInit {
     this.collectionForm.patchValue({
       loan_uuid: loan.uuid
     });
-    
+
     // Calculate balance
     const totalRepayable = parseFloat(loan.total_repayable) || 0;
     const pastCollections = this.collections
       .filter(c => c.loan_uuid === loan.uuid)
       .reduce((sum, c) => sum + (parseFloat(c.collected_amount) || 0), 0);
-      
+
     this.selectedLoanBalance = Math.max(0, totalRepayable - pastCollections);
   }
-  
+
   clearCollectionSelection() {
     this.selectedLoanForCollection = null;
     this.loanSearchQuery = '';
@@ -1646,7 +1680,7 @@ export class AdminDashboardPage implements OnInit {
 
   async onRecordCollection() {
     if (this.collectionForm.invalid || !this.selectedLoanForCollection) return;
-    
+
     const amount = parseFloat(this.collectionForm.value.collected_amount);
     if (amount <= 0) {
       this.showToast('Invalid amount. Must be greater than 0.', 'warning');
@@ -1720,7 +1754,7 @@ export class AdminDashboardPage implements OnInit {
 
     this.showToast('Payment saved offline. Will sync when online.', 'warning');
     this.clearCollectionSelection();
-    
+
     // Refresh local lists
     this.collections = await this.dbService.getCollections();
   }
@@ -1738,7 +1772,7 @@ export class AdminDashboardPage implements OnInit {
       collection_date: localISOTime,
       payment_type: col.payment_type || 'Cash'
     });
-    
+
     this.isEditCollectionOpen = true;
   }
 
@@ -1752,7 +1786,7 @@ export class AdminDashboardPage implements OnInit {
     if (this.editCollectionForm.invalid || !this.selectedEditCollection) return;
 
     const payload = this.editCollectionForm.value;
-    
+
     const loader = await this.loadingCtrl.create({
       message: 'Fetching location & updating...',
       spinner: 'crescent'
@@ -1813,7 +1847,7 @@ export class AdminDashboardPage implements OnInit {
 
   async onRecordExpense() {
     if (this.expenseForm.invalid) return;
-    
+
     const loader = await this.loadingCtrl.create({
       message: 'Recording expense...',
       spinner: 'crescent'

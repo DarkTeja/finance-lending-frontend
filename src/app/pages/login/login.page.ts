@@ -58,7 +58,12 @@ export class LoginPage implements OnInit {
     });
     await loader.present();
 
-    this.apiService.login(this.loginForm.value).subscribe({
+    const credentials = { ...this.loginForm.value };
+    if (credentials.username) {
+      credentials.username = credentials.username.trim();
+    }
+
+    this.apiService.login(credentials).subscribe({
       next: async (res) => {
         loader.dismiss();
         this.authService.saveSession(res.token, res.user);

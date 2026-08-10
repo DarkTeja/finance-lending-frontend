@@ -80,14 +80,25 @@ export class EmployeeDashboardPage implements OnInit {
   }
 
   dashboardStats: any = { today_collection: 0, today_count: 0, today_expenses: 0 };
+  employeeSummaryCount = 0;
+  employeeSummaryTotal = 0;
+  employeeSummaryCashTotal = 0;
+  employeeSummaryOnlineTotal = 0;
+  isSwitchingTab: boolean = false;
+
+  // Cached calculated arrays to prevent UI freezing
+  cachedAllCollectionsSorted: any[] = [];
   
-  isEditingLayout = false;
+  updateCachedCalculations() {
+    this.cachedAllCollectionsSorted = this.getAllCollectionsSorted();
+  }
   metricsConfig: any[] = [
     { id: 'today', title: 'Today Collection', color: '#3b82f6', key: 'today_collection', size: 'half' },
     { id: 'count', title: 'Collections Count', color: '#ec4899', key: 'today_count', size: 'half' },
     { id: 'exp', title: 'Today Expenses', color: '#e74c3c', key: 'today_expenses', size: 'half' }
   ];
-
+  
+  isEditingLayout = false;
   expenseForm!: FormGroup;
   isAddExpenseOpen = false;
 
@@ -331,11 +342,13 @@ export class EmployeeDashboardPage implements OnInit {
         const syncedCols = res.map((c: any) => ({ ...c, sync_status: 'Synced' }));
         await this.dbService.setCollections(syncedCols);
         this.loadDashboardStats();
+        this.updateCachedCalculations();
       },
       error: async (err) => {
         console.error('Error loading collections, falling back to local DB:', err);
         this.collections = await this.dbService.getCollections();
         this.loadDashboardStats();
+        this.updateCachedCalculations();
       }
     });
   }
@@ -355,8 +368,18 @@ export class EmployeeDashboardPage implements OnInit {
   }
 
   selectTab(tab: 'dashboard' | 'customers' | 'loans' | 'collection' | 'total-collections' | 'defaulters') {
-    this.activeTab = tab;
-    this.menuCtrl.close('emp-menu');
+    if (this.isSwitchingTab) return;
+    this.isSwitchingTab = true;
+
+    this.menuCtrl.close('emp-menu').then(() => {
+      this.activeTab = tab;
+      this.updateCachedCalculations(); // Update caches when switching tabs
+      this.isSwitchingTab = false;
+    }).catch(() => {
+      this.activeTab = tab;
+      this.updateCachedCalculations();
+      this.isSwitchingTab = false;
+    });
   }
 
   closeMenu() {
@@ -623,10 +646,18 @@ export class EmployeeDashboardPage implements OnInit {
           this.clearCollectionSelection();
           this.loadData();
           this.loadDashboardStats();
+          this.updateCachedCalculations();
         },
         error: async (err) => {
           loader.dismiss();
-          this.showToast(err?.error?.error || 'Failed to record payment online', 'danger');
+          console.error('Online sync failed, saving locally', err);
+          payload.sync_status = 'Pending';
+          await this.dbService.saveCollection(payload);
+          this.showToast('Saved offline. Will sync when online.', 'warning');
+          this.clearCollectionSelection();
+          this.loadData();
+          this.loadDashboardStats();
+          this.updateCachedCalculations();
         }
       });
     } else {
