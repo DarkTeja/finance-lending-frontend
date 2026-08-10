@@ -59,7 +59,7 @@
             </h1>
           </div>
           
-          <button id="emp-profile-trigger" style="flex-shrink: 0; background: transparent; border: none; padding: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; outline: none; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+          <button id="emp-profile-trigger" style="background: transparent; border: none; padding: 0; cursor: pointer; outline: none; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
             <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #1e3a8a, #3b82f6); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(30, 58, 138, 0.2); color: white; font-weight: 700; font-size: 18px; border: 2.5px solid white;">
               {{ (currentUser?.name || 'E')[0] | uppercase }}
             </div>
@@ -67,16 +67,13 @@
           <ion-popover trigger="emp-profile-trigger" dismissOnSelect="true" alignment="end">
             <ng-template>
               <ion-content>
-                <div style="padding: 16px; min-width: 240px;">
-                  <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
-                    <div style="width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #1e3a8a, #3b82f6); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 20px;">
-                      {{ (currentUser?.name || 'E')[0] | uppercase }}
-                    </div>
-                    <div>
-                      <h4 style="margin: 0 0 4px 0; color: #1e293b; font-weight: 700; font-size: 16px;">{{ currentUser?.name || 'Employee' }}</h4>
-                      <p style="margin: 0; font-size: 13px; color: #64748b; font-weight: 500;">Role: Employee</p>
-                    </div>
+                <div style="padding: 16px; min-width: 220px; text-align: center;">
+                  <div style="width: 50px; height: 50px; border-radius: 50%; background: #3b82f6; color: white; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: bold; margin: 0 auto 12px auto;">
+                    {{ (currentUser?.name || 'E')[0] | uppercase }}
                   </div>
+                  <h3 style="margin: 0 0 4px 0; color: #1e293b; font-size: 18px; font-weight: 700;">{{ currentUser?.name || 'Employee' }}</h3>
+                  <p style="margin: 0 0 16px 0; color: #64748b; font-size: 13px;">{{ currentUser?.organization_name || 'Workspace' }}</p>
+                  
                   <ion-button expand="block" color="danger" (click)="logout()" style="--box-shadow: none; --border-radius: 8px; font-weight: 600; text-transform: none;">
                     <ion-icon name="log-out-outline" slot="start"></ion-icon>
                     Log Out
@@ -456,11 +453,11 @@
                 <ion-modal trigger="emp-open-date-picker" [initialBreakpoint]="0.6" [breakpoints]="[0, 0.6]">
                   <ng-template>
                     <ion-content class="modal-bg">
-                      <ion-datetime presentation="date" [(ngModel)]="collectionFilterDate" size="cover"></ion-datetime>
+                      <ion-datetime presentation="date" [value]="collectionFilterDate" (ionChange)="onCollectionDateChange($event)" size="cover"></ion-datetime>
                     </ion-content>
                   </ng-template>
                 </ion-modal>
-                <ion-icon name="close-circle" style="cursor: pointer; color: #64748b; font-size: 18px;" *ngIf="collectionFilterDate" (click)="collectionFilterDate = ''" title="Clear Date"></ion-icon>
+                <ion-icon name="close-circle" style="cursor: pointer; color: #64748b; font-size: 18px;" *ngIf="collectionFilterDate" (click)="clearCollectionFilterDate($event)" title="Clear Date"></ion-icon>
               </div>
             </div>
             
@@ -522,8 +519,7 @@
           </div>
         </div>
 
-        
-          <ion-modal [isOpen]="isAddLoanOpen" (didDismiss)="isAddLoanOpen = false" class="glass-modal">
+      <ion-modal [isOpen]="isAddLoanOpen" (didDismiss)="isAddLoanOpen = false" class="glass-modal">
         <ng-template>
           <ion-header class="ion-no-border">
             <ion-toolbar>
@@ -630,8 +626,8 @@
                 <ion-icon name="person-circle-outline"></ion-icon>
                 <div style="flex: 1;">
                   <p class="name">{{ selectedDetailedLoan.customer_name }} ({{ selectedDetailedLoan.accno }})</p>
-                    <div style="font-size: 11px; margin-top: 8px; color: #8f9299; display: flex; justify-content: space-between; align-items: center;">
-                      <span [style.color]="getOtherActiveLoanNumbers(selectedDetailedLoan.customer_uuid, selectedDetailedLoan.uuid) === 'None' ? '#10b981' : '#ef4444'" style="font-weight: 700;">Other Active Loans: {{ getOtherActiveLoanNumbers(selectedDetailedLoan.customer_uuid, selectedDetailedLoan.uuid) }}</span>
+                  <div style="font-size: 11px; margin-top: 8px; color: #8f9299; display: flex; justify-content: space-between; align-items: center;">
+                    <span [style.color]="getOtherActiveLoanNumbers(selectedDetailedLoan.customer_uuid, selectedDetailedLoan.uuid) === 'None' ? '#10b981' : '#ef4444'" style="font-weight: 700;">Other Active Loans: {{ getOtherActiveLoanNumbers(selectedDetailedLoan.customer_uuid, selectedDetailedLoan.uuid) }}</span>
                     <a *ngIf="selectedDetailedLoan.latitude && selectedDetailedLoan.longitude" [href]="'https://www.google.com/maps?q=' + selectedDetailedLoan.latitude + ',' + selectedDetailedLoan.longitude" target="_blank" style="color: #4361ee; text-decoration: none; display: inline-flex; align-items: center; gap: 2px;">
                       <ion-icon name="location-outline"></ion-icon> Map
                     </a>
@@ -644,6 +640,10 @@
                 <div class="details-card">
                   <h5>Financial Summary</h5>
                   <div class="financials-grid" style="margin-top: 0; border-top: none; padding-top: 0;">
+                    <div class="fin-item" style="grid-column: 1 / -1; padding-bottom: 8px; margin-bottom: 4px; border-bottom: 1px dashed rgba(0,0,0,0.05);">
+                      <span class="label">Loan Given On</span>
+                      <span class="val" style="font-size: 13px; color: #64748b; font-weight: 600;">{{ selectedDetailedLoan.created_at | date:'dd MMM yyyy, h:mm a' }}</span>
+                    </div>
                     <div class="fin-item">
                       <span class="label">Principal</span>
                       <span class="val">₹{{ selectedDetailedLoan.loan_amount }}</span>
@@ -673,7 +673,9 @@
                     
                     <div *ngFor="let payment of getLoanHistory(selectedDetailedLoan.uuid)" class="history-item">
                       <div>
-                        <div class="hist-date">{{ payment.collection_date | date:'dd/MM/yyyy, h:mm a' }}</div>
+                        <div class="hist-date">
+                          {{ payment.collection_date | date:'dd/MM/yyyy, h:mm a' }}
+                        </div>
                         <div class="hist-by">
                           By: {{ payment.collected_by_name || 'System' }} • 
                           <ion-icon [name]="payment.payment_type === 'Online' ? 'phone-portrait-outline' : 'cash-outline'"></ion-icon> {{ payment.payment_type || 'Cash' }}
@@ -789,7 +791,7 @@
             
             </div>
           </div>
-        </div>
+      </div>
     </ion-content>
   </div>
 </ion-split-pane>

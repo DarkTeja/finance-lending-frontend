@@ -2,7 +2,7 @@ import { Subscription } from 'rxjs';
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { IonicModule, ToastController, LoadingController, MenuController } from '@ionic/angular';
+import { IonicModule, ToastController, LoadingController, MenuController, ActionSheetController } from '@ionic/angular';
 import { RouterModule } from '@angular/router';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -53,6 +53,21 @@ export class EmployeeDashboardPage implements OnInit {
   
   activeTab: 'dashboard' | 'customers' | 'loans' | 'collection' | 'total-collections' | 'defaulters' = 'dashboard';
   collectionFilterDate: string = '';
+
+  onCollectionDateChange(event: any) {
+    if (event.detail && event.detail.value) {
+      // ion-datetime sometimes returns an array if multiple dates are selected, but we use presentation="date"
+      const val = Array.isArray(event.detail.value) ? event.detail.value[0] : event.detail.value;
+      this.collectionFilterDate = typeof val === 'string' ? val.split('T')[0] : val;
+      this.updateCachedCalculations();
+    }
+  }
+
+  clearCollectionFilterDate(event: Event) {
+    event.stopPropagation();
+    this.collectionFilterDate = '';
+    this.updateCachedCalculations();
+  }
 
   defaultersDaysThreshold = 5;
   getDefaulters() {
@@ -136,7 +151,8 @@ export class EmployeeDashboardPage implements OnInit {
     private authService: AuthService,
     private toastCtrl: ToastController,
     private loadingCtrl: LoadingController,
-    private menuCtrl: MenuController
+    private menuCtrl: MenuController,
+    private actionSheetCtrl: ActionSheetController
   ) {}
 
   ngOnInit() {
@@ -873,5 +889,29 @@ export class EmployeeDashboardPage implements OnInit {
       position: 'bottom'
     });
     await toast.present();
+  }
+
+  async openProfileMenu() {
+    const actionSheet = await this.actionSheetCtrl.create({
+      header: this.currentUser?.name || 'Profile',
+      subHeader: this.currentUser?.organization_name || 'Workspace',
+      cssClass: 'custom-action-sheet',
+      buttons: [
+        {
+          text: 'Sign Out',
+          icon: 'log-out-outline',
+          role: 'destructive',
+          handler: () => {
+            this.logout();
+          }
+        },
+        {
+          text: 'Cancel',
+          icon: 'close-outline',
+          role: 'cancel'
+        }
+      ]
+    });
+    await actionSheet.present();
   }
 }

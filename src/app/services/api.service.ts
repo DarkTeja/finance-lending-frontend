@@ -7,7 +7,7 @@ import { Observable } from 'rxjs';
 })
 export class ApiService {
   // Use host PC local network IP so mobile browser can connect
-  private readonly baseUrl = 'http://3.108.58.194';
+  private readonly baseUrl = 'http://3.110.218.28';
   // private readonly baseUrl = 'http://192.168.1.45:3000';
 
   constructor(private http: HttpClient) {}
