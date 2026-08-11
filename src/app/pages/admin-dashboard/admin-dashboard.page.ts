@@ -26,6 +26,7 @@ Chart.register(...registerables);
 })
 export class AdminDashboardPage implements OnInit {
   currentUser: any;
+  loginHistory: any[] = [];
   employees: any[] = [];
   customers: any[] = [];
   loans: any[] = [];
@@ -224,6 +225,7 @@ export class AdminDashboardPage implements OnInit {
     this.initForms();
     this.setupLoanCalculationListeners();
     this.loadData();
+    this.loadLoginHistory();
 
     const savedLayout = localStorage.getItem('adminDashboardMetricsLayout');
     if (savedLayout) {
@@ -269,6 +271,8 @@ export class AdminDashboardPage implements OnInit {
   }
 
   ionViewWillEnter() {
+    this.currentUser = this.authService.getCurrentUser();
+    this.loadLoginHistory();
     this.loadData();
     this.loadWithdrawals();
   }
@@ -337,8 +341,9 @@ export class AdminDashboardPage implements OnInit {
       can_collect_payments: [true],
       can_view_reports: [false],
       can_view_total_collections: [false],
-      can_view_defaulters: [false]
-    });
+      can_view_defaulters: [false],
+        can_view_maps: [true]
+      });
     this.editEmployeeForm = this.fb.group({
       name: ['', Validators.required],
       mobile_number: ['', [Validators.required, Validators.pattern('^[0-9]{10}$')]]
@@ -349,8 +354,9 @@ export class AdminDashboardPage implements OnInit {
       can_collect_payments: [true],
       can_view_reports: [false],
       can_view_total_collections: [false],
-      can_view_defaulters: [false]
-    });
+      can_view_defaulters: [false],
+        can_view_maps: [true]
+      });
 
     this.loanForm = this.fb.group({
       customer_uuid: ['', [Validators.required]],
@@ -550,6 +556,17 @@ export class AdminDashboardPage implements OnInit {
     }
 
     this.isEditCalculating = false;
+  }
+
+  loadLoginHistory() {
+    this.apiService.getLoginHistory().subscribe({
+      next: (res: any) => {
+        this.loginHistory = res;
+      },
+      error: (err) => {
+        console.error('Failed to load login history', err);
+      }
+    });
   }
 
   loadData() {
@@ -1555,7 +1572,8 @@ export class AdminDashboardPage implements OnInit {
           can_collect_payments: true,
           can_view_reports: false,
           can_view_total_collections: false,
-          can_view_defaulters: false
+          can_view_defaulters: false,
+          can_view_maps: true
         });
         this.loadData();
 
@@ -1575,7 +1593,8 @@ export class AdminDashboardPage implements OnInit {
       can_collect_payments: emp.can_collect_payments === 1 || emp.can_collect_payments === true,
       can_view_reports: emp.can_view_reports === 1 || emp.can_view_reports === true,
       can_view_total_collections: emp.can_view_total_collections === 1 || emp.can_view_total_collections === true,
-      can_view_defaulters: emp.can_view_defaulters === 1 || emp.can_view_defaulters === true
+      can_view_defaulters: emp.can_view_defaulters === 1 || emp.can_view_defaulters === true,
+      can_view_maps: emp.can_view_maps === 1 || emp.can_view_maps === true
     });
     this.isManagePermissionsOpen = true;
   }

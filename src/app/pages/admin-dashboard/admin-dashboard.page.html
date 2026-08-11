@@ -102,6 +102,17 @@
                   <p style="margin: 0; font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">Workspace</p>
                   <h4 style="margin: 6px 0 16px 0; font-size: 16px; color: #1e293b; font-weight: 800;">{{ currentUser?.organization_name || 'Organization' }}</h4>
                   
+                  <div *ngIf="loginHistory && loginHistory.length > 1" style="margin-bottom: 16px; border-top: 1px solid #e2e8f0; padding-top: 12px;">
+                    <p style="margin: 0 0 8px 0; font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">Last Login</p>
+                    <div style="max-height: 180px; overflow-y: auto;">
+                      <div *ngFor="let login of loginHistory | slice:1:2" style="margin-bottom: 12px; padding: 8px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+                        <p style="margin: 0; font-size: 13px; font-weight: 700; color: #1e293b;"><ion-icon name="location-outline" style="vertical-align: middle;"></ion-icon> {{ login.location }}</p>
+                        <p style="margin: 4px 0 0 0; font-size: 11px; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" [title]="login.device_info"><ion-icon name="phone-portrait-outline" style="vertical-align: middle;"></ion-icon> {{ login.device_info || 'Unknown Device' }}</p>
+                        <p style="margin: 4px 0 0 0; font-size: 11px; color: #3b82f6; font-weight: 600;"><ion-icon name="time-outline" style="vertical-align: middle;"></ion-icon> {{ login.login_time | date:'MMM d, h:mm a' }}</p>
+                      </div>
+                    </div>
+                  </div>
+
                   <ion-button expand="block" fill="clear" (click)="openChangeMyPasswordModal()" style="margin-bottom: 8px; --justify-content: flex-start; text-transform: none; font-weight: 600; color: #3b82f6; background: rgba(59, 130, 246, 0.1); border-radius: 8px;">
                     <ion-icon name="key-outline" slot="start"></ion-icon> Change Password
                   </ion-button>
@@ -645,7 +656,7 @@
                           <ion-icon [name]="col.payment_type === 'Online' ? 'phone-portrait-outline' : 'cash-outline'"></ion-icon> {{ col.payment_type || 'Cash' }}
                         </span>
                         <span style="display: inline-flex;">
-                          <a *ngIf="col.latitude && col.longitude" [href]="'https://www.google.com/maps?q=' + col.latitude + ',' + col.longitude" target="_blank" style="color: #3b82f6; text-decoration: none; display: inline-flex; align-items: center; gap: 2px;">
+                          <a *ngIf="col.latitude && col.longitude && currentUser?.can_view_maps !== false" [href]="'https://www.google.com/maps?q=' + col.latitude + ',' + col.longitude" target="_blank" style="color: #3b82f6; text-decoration: none; display: inline-flex; align-items: center; gap: 2px;">
                             <ion-icon name="location-outline"></ion-icon> Map
                           </a>
                         </span>
@@ -736,7 +747,7 @@
                   </span>
                   
                   <span style="display: inline-flex; width: 50px;">
-                    <a *ngIf="col.latitude && col.longitude" [href]="'https://www.google.com/maps?q=' + col.latitude + ',' + col.longitude" target="_blank" style="color: #3b82f6; text-decoration: none; display: inline-flex; align-items: center; gap: 2px;">
+                    <a *ngIf="col.latitude && col.longitude && currentUser?.can_view_maps !== false" [href]="'https://www.google.com/maps?q=' + col.latitude + ',' + col.longitude" target="_blank" style="color: #3b82f6; text-decoration: none; display: inline-flex; align-items: center; gap: 2px;">
                       <ion-icon name="location-outline"></ion-icon> Map
                     </a>
                   </span>
@@ -833,7 +844,7 @@
                 <p style="color: #94a3b8; font-size: 15px;">No transactions found for this date.</p>
               </div>
 
-              <div class="collection-logs" *ngIf="cashbookData.transactions && cashbookData.transactions.length > 0" style="margin-bottom: 24px;">
+              <div class="collection-logs" *ngIf="cashbookData.transactions && cashbookData.transactions.length > 0" style="margin-bottom: 24px; flex-direction: column-reverse;">
                 <div *ngFor="let tx of cashbookData.transactions" class="col-log-card" 
                      [ngStyle]="{'border-left': '4px solid ' + (tx.type === 'collection' || tx.type === 'investment' ? '#10b981' : '#e74c3c')}">
                   
@@ -1030,8 +1041,13 @@
 
                 <div class="checkbox-item">
                   <ion-checkbox formControlName="can_view_defaulters"></ion-checkbox>
-                  <ion-label>Can view defaulters section</ion-label>
-                </div>
+                    <ion-label>Can view defaulters section</ion-label>
+                  </div>
+
+                  <div class="checkbox-item">
+                    <ion-checkbox formControlName="can_view_maps"></ion-checkbox>
+                    <ion-label>Can view map locations</ion-label>
+                  </div>
               </div>
 
               <button type="submit" [disabled]="employeeForm.invalid" class="submit-modal-btn">
@@ -1077,8 +1093,13 @@
 
                 <div class="checkbox-item">
                   <ion-checkbox formControlName="can_view_defaulters"></ion-checkbox>
-                  <ion-label>Authorized to view defaulters section</ion-label>
-                </div>
+                    <ion-label>Authorized to view defaulters section</ion-label>
+                  </div>
+
+                  <div class="checkbox-item">
+                    <ion-checkbox formControlName="can_view_maps"></ion-checkbox>
+                    <ion-label>Authorized to view map locations</ion-label>
+                  </div>
               </div>
 
               <button type="submit" class="submit-modal-btn">
@@ -1408,7 +1429,7 @@
                   <p class="name">{{ selectedDetailedLoan.customer_name }} ({{ selectedDetailedLoan.accno }})</p>
                   <div style="font-size: 11px; margin-top: 8px; color: #8f9299; display: flex; justify-content: space-between; align-items: center;">
                     <span [style.color]="getOtherActiveLoanNumbers(selectedDetailedLoan.customer_uuid, selectedDetailedLoan.uuid) === 'None' ? '#10b981' : '#ef4444'" style="font-weight: 700;">Other Active Loans: {{ getOtherActiveLoanNumbers(selectedDetailedLoan.customer_uuid, selectedDetailedLoan.uuid) }}</span>
-                    <a *ngIf="selectedDetailedLoan.latitude && selectedDetailedLoan.longitude" [href]="'https://www.google.com/maps?q=' + selectedDetailedLoan.latitude + ',' + selectedDetailedLoan.longitude" target="_blank" style="color: #4361ee; text-decoration: none; display: inline-flex; align-items: center; gap: 2px;">
+                    <a *ngIf="selectedDetailedLoan.latitude && selectedDetailedLoan.longitude && currentUser?.can_view_maps !== false" [href]="'https://www.google.com/maps?q=' + selectedDetailedLoan.latitude + ',' + selectedDetailedLoan.longitude" target="_blank" style="color: #4361ee; text-decoration: none; display: inline-flex; align-items: center; gap: 2px;">
                       <ion-icon name="location-outline"></ion-icon> Map
                     </a>
                   </div>

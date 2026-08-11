@@ -23,6 +23,7 @@ import { DragDropModule, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-
 export class EmployeeDashboardPage implements OnInit {
   private userSubscription!: Subscription;
   currentUser: any;
+  loginHistory: any[] = [];
   customers: any[] = [];
   loans: any[] = [];
 
@@ -160,6 +161,7 @@ export class EmployeeDashboardPage implements OnInit {
     this.initForms();
     this.setupLoanCalculationListeners();
     this.loadData();
+    this.loadLoginHistory();
 
     const savedLayout = localStorage.getItem('employeeDashboardMetricsLayout');
     if (savedLayout) {
@@ -193,6 +195,8 @@ export class EmployeeDashboardPage implements OnInit {
   pollInterval: any;
 
   ionViewWillEnter() {
+    this.currentUser = this.authService.getCurrentUser();
+    this.loadLoginHistory();
     // Check immediately
     this.checkPermissions();
     // Then poll every 3 seconds for true "immediate" UI updates
@@ -319,6 +323,17 @@ export class EmployeeDashboardPage implements OnInit {
       }, { emitEvent: false });
     }
     this.isCalculating = false;
+  }
+
+  loadLoginHistory() {
+    this.apiService.getLoginHistory().subscribe({
+      next: (res: any) => {
+        this.loginHistory = res;
+      },
+      error: (err) => {
+        console.error('Failed to load login history', err);
+      }
+    });
   }
 
   loadData() {

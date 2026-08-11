@@ -29,6 +29,10 @@ export class ApiService {
     return this.http.get(`${this.baseUrl}/auth/me`, { headers: this.getHeaders() });
   }
 
+  getLoginHistory(): Observable<any> {
+    return this.http.get(`${this.baseUrl}/auth/login-history`, { headers: this.getHeaders() });
+  }
+
   changeMyPassword(data: any): Observable<any> {
     return this.http.put(`${this.baseUrl}/auth/me/password`, data, { headers: this.getHeaders() });
   }
@@ -76,8 +80,8 @@ export class ApiService {
   }
 
   // --- Customers ---
-  getCustomers(): Observable<any> {
-    return this.http.get(`${this.baseUrl}/customers`, { headers: this.getHeaders() });
+  getCustomers(limit: number = 10000, offset: number = 0): Observable<any> {
+    return this.http.get(`${this.baseUrl}/customers?limit=${limit}&offset=${offset}`, { headers: this.getHeaders() });
   }
 
   createCustomer(customer: any): Observable<any> {
@@ -123,8 +127,8 @@ export class ApiService {
   }
 
   // --- Loans ---
-  getLoans(): Observable<any> {
-    return this.http.get(`${this.baseUrl}/loans`, { headers: this.getHeaders() });
+  getLoans(limit: number = 10000, offset: number = 0): Observable<any> {
+    return this.http.get(`${this.baseUrl}/loans?limit=${limit}&offset=${offset}`, { headers: this.getHeaders() });
   }
 
   createLoan(data: any): Observable<any> {
@@ -140,8 +144,8 @@ export class ApiService {
   }
 
   // --- Collections ---
-  getCollections(): Observable<any> {
-    return this.http.get(`${this.baseUrl}/collections`, { headers: this.getHeaders() });
+  getCollections(limit: number = 10000, offset: number = 0): Observable<any> {
+    return this.http.get(`${this.baseUrl}/collections?limit=${limit}&offset=${offset}`, { headers: this.getHeaders() });
   }
 
   createCollection(data: any): Observable<any> {
