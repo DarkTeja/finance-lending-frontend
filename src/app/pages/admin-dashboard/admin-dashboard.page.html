@@ -712,7 +712,7 @@
               </div>
             </div>
 
-            <div class="collection-logs" style="max-width: 800px; margin: 0 auto;">
+            <div class="collection-logs">
               <div *ngIf="cachedAllCollectionsSorted.length === 0" class="empty-state" style="padding: 40px;">
                 <ion-icon name="receipt-outline"></ion-icon>
                 <p>No collections recorded yet.</p>
@@ -754,15 +754,17 @@
         </div>
 
         <!-- TAB: WITHDRAWALS -->
-        <div *ngIf="activeTab === 'withdrawals'" class="tab-content">
+        <div *ngIf="activeTab === 'withdrawals'" class="tab-content full-height-tab">
           <div class="section-card glass-panel">
             <div class="card-header" style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: flex-end;">
-              <button class="action-btn-green" (click)="isWithdrawalModalOpen = true" style="background: #ef4444; border-color: #ef4444; color: white;">
-                <ion-icon name="cash-outline" slot="start"></ion-icon> Withdraw Profit
-              </button>
+              <div style="display: flex; gap: 8px;">
+                <button class="action-btn-green" (click)="isWithdrawalModalOpen = true" style="background: #ef4444; border-color: #ef4444; color: white;">
+                  <ion-icon name="cash-outline" slot="start"></ion-icon> Withdraw Profit
+                </button>
+              </div>
             </div>
             
-            <div class="collection-logs" style="max-width: 800px; margin: 0 auto; padding-top: 16px;">
+            <div class="collection-logs" style="padding-top: 16px;">
               <div *ngIf="withdrawals.length === 0" class="empty-state" style="padding: 40px;">
                 <ion-icon name="cash-outline"></ion-icon>
                 <p>No withdrawals recorded yet.</p>
@@ -770,16 +772,16 @@
 
               <div *ngFor="let with of withdrawals" class="col-log-card" style="border-left: 4px solid #ef4444;">
                 <div class="col-log-header">
-                  <span class="rcpt">{{ with.reason }}</span>
+                  <span class="rcpt">
+                    {{ with.reason }}
+                    <ion-icon name="trash-outline" style="cursor: pointer; color: #ef4444; margin-left: 6px;" (click)="onDeleteWithdrawal(with.uuid)"></ion-icon>
+                  </span>
                   <span class="amt" style="color: #ef4444;">-₹{{ with.amount }}</span>
                 </div>
-                <p class="meta" style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
-                  <span style="display: flex; align-items: center; gap: 8px;">
-                    <span *ngIf="with.added_by_name">By: {{ with.added_by_name }}</span>
-                    <span *ngIf="with.added_by_name" style="color: #cbd5e1;">•</span>
-                    <span><ion-icon name="time-outline" style="vertical-align: middle; margin-right: 4px;"></ion-icon>{{ (with.withdrawal_date || with.created_at) | date:'dd/MM/yyyy, h:mm a' }}</span>
-                  </span>
-                  <ion-icon name="trash-outline" style="color: #ef4444; font-size: 18px; cursor: pointer;" (click)="onDeleteWithdrawal(with.uuid)"></ion-icon>
+                <p class="meta" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                  <span *ngIf="with.added_by_name">Added by: {{ with.added_by_name }}</span>
+                  <span *ngIf="with.added_by_name" style="color: #cbd5e1;">•</span>
+                  <span><ion-icon name="time-outline" style="vertical-align: middle; margin-right: 4px;"></ion-icon>{{ (with.withdrawal_date || with.created_at) | date:'dd/MM/yyyy, h:mm a' }}</span>
                 </p>
               </div>
             </div>
@@ -881,7 +883,7 @@
         </div>
 
         <!-- TAB: INVESTMENTS -->
-        <div *ngIf="activeTab === 'investments'" class="tab-content">
+        <div *ngIf="activeTab === 'investments'" class="tab-content full-height-tab">
           <div class="section-card glass-panel">
             <div class="card-header" style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: flex-end;">
               <div style="display: flex; gap: 8px;">
@@ -891,7 +893,7 @@
               </div>
             </div>
             
-            <div class="collection-logs" style="max-width: 800px; margin: 0 auto; padding-top: 16px;">
+            <div class="collection-logs" style="padding-top: 16px;">
               <div *ngIf="investments.length === 0" class="empty-state" style="padding: 40px;">
                 <ion-icon name="briefcase-outline"></ion-icon>
                 <p>No investments recorded yet.</p>
@@ -908,7 +910,7 @@
                 <p class="meta" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                   <span>Added by: {{ inv.added_by_name }}</span>
                   <span style="color: #cbd5e1;">•</span>
-                  <span><ion-icon name="time-outline" style="vertical-align: middle; margin-right: 4px;"></ion-icon>{{ inv.investment_date | date:'shortTime' }}</span>
+                  <span><ion-icon name="time-outline" style="vertical-align: middle; margin-right: 4px;"></ion-icon>{{ inv.investment_date | date:'dd/MM/yyyy, h:mm a' }}</span>
                 </p>
               </div>
             </div>
@@ -916,7 +918,7 @@
         </div>
 
         <!-- TAB: EXPENSES -->
-        <div *ngIf="activeTab === 'expenses'" class="tab-content">
+        <div *ngIf="activeTab === 'expenses'" class="tab-content full-height-tab">
           <div class="section-card glass-panel">
             <div class="card-header" style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between;">
               <div style="display: flex; align-items: center; gap: 8px;">
@@ -941,7 +943,7 @@
               </div>
             </div>
             
-            <div class="collection-logs" style="max-width: 800px; margin: 0 auto; padding-top: 16px;">
+            <div class="collection-logs" style="padding-top: 16px;">
               <div *ngIf="cachedFilteredExpenses.length === 0" class="empty-state" style="padding: 40px;">
                 <ion-icon name="receipt-outline"></ion-icon>
                 <p>No expenses recorded for selected date.</p>
@@ -959,7 +961,7 @@
                 <p class="meta" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                   <span>Added by: {{ exp.added_by_name }}</span>
                   <span style="color: #cbd5e1;">•</span>
-                  <span><ion-icon name="time-outline" style="vertical-align: middle; margin-right: 4px;"></ion-icon>{{ exp.expense_date | date:'shortTime' }}</span>
+                  <span><ion-icon name="time-outline" style="vertical-align: middle; margin-right: 4px;"></ion-icon>{{ exp.expense_date | date:'dd/MM/yyyy, h:mm a' }}</span>
                 </p>
               </div>
             </div>
@@ -1847,35 +1849,32 @@
       </ion-modal>
 
       <!-- ADD WITHDRAWAL MODAL -->
-      <ion-modal [isOpen]="isWithdrawalModalOpen" (didDismiss)="isWithdrawalModalOpen = false" [initialBreakpoint]="0.75" [breakpoints]="[0, 0.75, 1]">
+      <ion-modal [isOpen]="isWithdrawalModalOpen" (didDismiss)="isWithdrawalModalOpen = false" class="glass-modal">
         <ng-template>
+          <ion-header class="ion-no-border">
+            <ion-toolbar style="--background: transparent; padding-top: 12px;">
+              <ion-title style="color: #1e293b; font-weight: 800; font-size: 20px;">
+                <ion-icon name="cash" style="vertical-align: middle; margin-right: 8px; color: #ef4444;"></ion-icon>
+                Withdraw Profit
+              </ion-title>
+              <ion-buttons slot="end">
+                <ion-button (click)="isWithdrawalModalOpen = false" style="color: #1e293b; font-size: 24px; margin-right: 12px;">
+                  <ion-icon name="close-circle"></ion-icon>
+                </ion-button>
+              </ion-buttons>
+            </ion-toolbar>
+          </ion-header>
           <ion-content class="modal-bg">
-            <div class="modal-header-banner" style="background: linear-gradient(135deg, #ef4444, #dc2626); color: white; padding: 24px; border-bottom-left-radius: 24px; border-bottom-right-radius: 24px; display: flex; justify-content: space-between; align-items: flex-start; box-shadow: 0 10px 25px rgba(239, 68, 68, 0.2);">
-              <div>
-                <h2 style="margin: 0 0 8px 0; font-size: 24px; font-weight: 800;">Withdraw Profit</h2>
-                <p style="margin: 0; font-size: 14px; opacity: 0.9;">Take profit out of the business cashbook</p>
-              </div>
-              <ion-button fill="clear" (click)="isWithdrawalModalOpen = false" style="--color: white; margin: -10px -10px 0 0;">
-                <ion-icon name="close-circle" style="font-size: 28px;"></ion-icon>
-              </ion-button>
-            </div>
-            
             <div style="padding: 24px;">
-              <form [formGroup]="withdrawalForm" (ngSubmit)="recordWithdrawal()">
-                
-                <div class="input-group" style="margin-bottom: 20px;">
+              <form [formGroup]="withdrawalForm" (ngSubmit)="recordWithdrawal()" style="background: rgba(255, 255, 255, 0.95); padding: 20px; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.1);">
+                <div class="input-group" style="margin-bottom: 16px;">
                   <label style="color: #475569; font-weight: 600; margin-bottom: 6px; display: block;">Amount (₹) *</label>
-                  <div style="position: relative;">
-                    <span style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); font-weight: 700; color: #1e293b; font-size: 18px;">₹</span>
-                    <input type="number" formControlName="amount" placeholder="e.g. 50000" style="width: 100%; padding: 16px 16px 16px 40px; border-radius: 12px; border: 1px solid rgba(0, 0, 0, 0.1); background: #f8fafc; font-size: 18px; font-weight: 700; color: #1e293b; outline: none;" />
-                  </div>
+                  <input type="number" formControlName="amount" placeholder="e.g. 50000" style="width: 100%; padding: 14px 16px; border-radius: 12px; border: 1px solid rgba(0, 0, 0, 0.1); background: #f8fafc; font-size: 16px; font-weight: 600; color: #ef4444; outline: none;" />
                 </div>
-
                 <div class="input-group" style="margin-bottom: 24px;">
                   <label style="color: #475569; font-weight: 600; margin-bottom: 6px; display: block;">Reason / Description *</label>
                   <input type="text" formControlName="reason" placeholder="e.g. Partner Distribution" style="width: 100%; padding: 14px 16px; border-radius: 12px; border: 1px solid rgba(0, 0, 0, 0.1); background: #f8fafc; font-size: 15px; color: #1e293b; outline: none;" />
                 </div>
-                
                 <button type="submit" [disabled]="withdrawalForm.invalid" class="submit-modal-btn" style="width: 100%; padding: 16px; border-radius: 12px; background: linear-gradient(135deg, #ef4444, #dc2626); color: white; font-size: 16px; font-weight: 700; border: none; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3); transition: transform 0.2s;">
                   <ion-icon name="arrow-down-circle-outline" style="vertical-align: middle; margin-right: 4px; font-size: 20px;"></ion-icon> Confirm Withdrawal
                 </button>

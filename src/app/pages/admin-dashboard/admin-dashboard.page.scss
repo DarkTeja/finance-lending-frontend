@@ -959,7 +959,7 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  max-height: 400px;
+  
   overflow-y: auto;
   padding-right: 4px;
 }
@@ -1130,3 +1130,23 @@
   border-left: 1px solid rgba(255, 255, 255, 0.6) !important;
 }
 
+
+.full-height-tab {
+  height: calc(100vh - 160px);
+  display: flex;
+  flex-direction: column;
+
+  .glass-panel {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    margin-bottom: 0 !important;
+  }
+
+  .collection-logs {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding-bottom: 20px;
+  }
+}

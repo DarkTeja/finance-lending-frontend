@@ -52,7 +52,7 @@ export class EmployeeDashboardPage implements OnInit {
   isOnline = true;
   
   activeTab: 'dashboard' | 'customers' | 'loans' | 'collection' | 'total-collections' | 'defaulters' = 'dashboard';
-  collectionFilterDate: string = '';
+  collectionFilterDate: string = new Date().toISOString().split('T')[0];
 
   onCollectionDateChange(event: any) {
     if (event.detail && event.detail.value) {
@@ -642,8 +642,8 @@ export class EmployeeDashboardPage implements OnInit {
 
     try {
       const position: any = await Promise.race([
-        Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 5000 }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Location timeout')), 5500))
+        Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 15000 }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Location timeout')), 15500))
       ]);
       payload.latitude = position.coords.latitude;
       payload.longitude = position.coords.longitude;
