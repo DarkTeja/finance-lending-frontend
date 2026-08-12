@@ -7,8 +7,8 @@ import { Observable } from 'rxjs';
 })
 export class ApiService {
   // Use host PC local network IP so mobile browser can connect
-  private readonly baseUrl = 'http://3.110.218.28';
-  // private readonly baseUrl = 'http://192.168.1.45:3000';
+  // private readonly baseUrl = 'http://3.110.218.28';
+  private readonly baseUrl = 'http://192.168.1.10:3000';
 
   constructor(private http: HttpClient) {}
 
@@ -212,5 +212,14 @@ export class ApiService {
 
   deleteWithdrawal(uuid: string): Observable<any> {
     return this.http.delete(`${this.baseUrl}/withdrawals/${uuid}`, { headers: this.getHeaders() });
+  }
+
+  // --- Bulk Import ---
+  bulkImportExcel(data: { loans: any[], transactions: any[] }): Observable<any> {
+    return this.http.post(`${this.baseUrl}/import/bulk-excel`, data, { headers: this.getHeaders() });
+  }
+
+  revertBulkImport(batchId: string): Observable<any> {
+    return this.http.delete(`${this.baseUrl}/import/revert/${batchId}`, { headers: this.getHeaders() });
   }
 }

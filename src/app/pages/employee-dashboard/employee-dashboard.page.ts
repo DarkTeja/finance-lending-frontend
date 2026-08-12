@@ -419,7 +419,14 @@ export class EmployeeDashboardPage implements OnInit {
 
   // --- Account Numbers Grid Navigation ---
   getActiveLoans() {
-    return this.loans.filter(l => l.status === 'active');
+    return this.loans.filter(l => l.status === 'active').sort((a, b) => {
+      const numA = Number(a.accno);
+      const numB = Number(b.accno);
+      if (!isNaN(numA) && !isNaN(numB)) {
+        return numB - numA;
+      }
+      return String(b.accno).localeCompare(String(a.accno));
+    });
   }
 
   scrollToLoan(loanUuid: string) {
@@ -472,9 +479,12 @@ export class EmployeeDashboardPage implements OnInit {
       const balB = this.getLoanBalance(b) <= 0 ? 0 : 1;
       if (balA !== balB) return balA - balB; // 0 balance comes first
       
-      const tA = a.created_at ? new Date(a.created_at.toString().replace(' ', 'T')).getTime() : 0;
-      const tB = b.created_at ? new Date(b.created_at.toString().replace(' ', 'T')).getTime() : 0;
-      return tB - tA; // Then newest first
+      const numA = Number(a.accno);
+      const numB = Number(b.accno);
+      if (!isNaN(numA) && !isNaN(numB)) {
+        return numB - numA;
+      }
+      return String(b.accno).localeCompare(String(a.accno));
     });
 
     if (!this.directoryLoanSearchQuery) return list;
@@ -487,9 +497,12 @@ export class EmployeeDashboardPage implements OnInit {
   getClosedLoansList(): any[] {
     const list = this.loans.filter(l => l.status === 'closed');
     list.sort((a, b) => {
-      const tA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
-      const tB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
-      return tB - tA;
+      const numA = Number(a.accno);
+      const numB = Number(b.accno);
+      if (!isNaN(numA) && !isNaN(numB)) {
+        return numB - numA;
+      }
+      return String(b.accno).localeCompare(String(a.accno));
     });
     if (!this.directoryLoanSearchQuery) return list;
     const q = this.directoryLoanSearchQuery.toLowerCase();
@@ -775,7 +788,7 @@ export class EmployeeDashboardPage implements OnInit {
     const data = this.getAllCollectionsSorted();
     if (data.length === 0) return;
 
-    let csvContent = 'Account No,Name,Amount,Type,Receipt,Place,Date and Time\n';
+    let csvContent = 'Account No,Name,Amount,Type,Place,Date and Time\n';
     
     data.forEach(col => {
       const d = new Date(col.collection_date);
@@ -785,7 +798,7 @@ export class EmployeeDashboardPage implements OnInit {
       const place = col.customer_place || 'N/A';
       const dateTimeStr = `${dateStr} ${timeStr}`;
       
-      const row = `"${col.accno}","${col.customer_name}","${amt}","${col.payment_type || 'Cash'}","${col.receipt_no}","${place}","${dateTimeStr}"`;
+      const row = `"${col.accno}","${col.customer_name}","${amt}","${col.payment_type || 'Cash'}","${place}","${dateTimeStr}"`;
       csvContent += row + '\n';
     });
 
@@ -825,14 +838,14 @@ export class EmployeeDashboardPage implements OnInit {
         col.customer_name,
         col.collected_amount,
         col.payment_type || 'Cash',
-        col.receipt_no,
+
         place,
         `${`${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`} ${d.toLocaleTimeString()}`
       ];
     });
 
     autoTable(doc, {
-      head: [['Account No', 'Name', 'Amount', 'Type', 'Receipt', 'Place', 'Date & Time']],
+      head: [['Account No', 'Name', 'Amount', 'Type', 'Place', 'Date & Time']],
       body: tableData,
       startY: 20,
     });

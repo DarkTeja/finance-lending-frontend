@@ -15,6 +15,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { DragDropModule, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { Chart, registerables } from 'chart.js';
+import * as XLSX from 'xlsx';
 
 Chart.register(...registerables);
 @Component({
@@ -170,6 +171,15 @@ export class AdminDashboardPage implements OnInit {
   resetEmployeePasswordForm!: FormGroup;
   selectedEmployeeForReset: any = null;
   highlightedLoanUuid: string | null = null;
+
+  // Bulk Import State
+  isBulkImportModalOpen = false;
+  bulkImportFile: File | null = null;
+  isUploadingBulk = false;
+  importResults: any = null;
+  parsedLoansPreview: any[] = [];
+  parsedTransactionsPreview: any[] = [];
+  previewTotalTransactions: number = 0;
 
   selectedEmployeeForPermissions: any = null;
   selectedCustomerForManage: any = null;
@@ -1169,7 +1179,14 @@ export class AdminDashboardPage implements OnInit {
 
   // --- Account Numbers Grid Navigation ---
   getActiveLoans() {
-    return this.loans.filter(l => l.status === 'active');
+    return this.loans.filter(l => l.status === 'active').sort((a, b) => {
+      const numA = Number(a.accno);
+      const numB = Number(b.accno);
+      if (!isNaN(numA) && !isNaN(numB)) {
+        return numB - numA;
+      }
+      return String(b.accno).localeCompare(String(a.accno));
+    });
   }
 
   scrollToLoan(loanUuid: string) {
@@ -1248,9 +1265,12 @@ export class AdminDashboardPage implements OnInit {
       const balB = this.getLoanBalance(b) <= 0 ? 0 : 1;
       if (balA !== balB) return balA - balB; // 0 balance comes first
 
-      const tA = a.created_at ? new Date(a.created_at.toString().replace(' ', 'T')).getTime() : 0;
-      const tB = b.created_at ? new Date(b.created_at.toString().replace(' ', 'T')).getTime() : 0;
-      return tB - tA; // Then newest first
+      const numA = Number(a.accno);
+      const numB = Number(b.accno);
+      if (!isNaN(numA) && !isNaN(numB)) {
+        return numB - numA;
+      }
+      return String(b.accno).localeCompare(String(a.accno));
     });
 
     if (!this.directoryLoanSearchQuery) return list;
@@ -1263,9 +1283,12 @@ export class AdminDashboardPage implements OnInit {
   getClosedLoansList(): any[] {
     const list = this.loans.filter(l => l.status === 'closed');
     list.sort((a, b) => {
-      const tA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
-      const tB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
-      return tB - tA;
+      const numA = Number(a.accno);
+      const numB = Number(b.accno);
+      if (!isNaN(numA) && !isNaN(numB)) {
+        return numB - numA;
+      }
+      return String(b.accno).localeCompare(String(a.accno));
     });
     if (!this.directoryLoanSearchQuery) return list;
     const q = this.directoryLoanSearchQuery.toLowerCase();
@@ -1372,7 +1395,7 @@ export class AdminDashboardPage implements OnInit {
     const data = this.getAllCollectionsSorted();
     if (data.length === 0) return;
 
-    let csvContent = 'Account No,Name,Amount,Type,Receipt,Place,Date and Time\n';
+    let csvContent = 'Account No,Name,Amount,Type,Place,Date and Time\n';
 
     data.forEach(col => {
       const d = new Date(col.collection_date);
@@ -1382,7 +1405,7 @@ export class AdminDashboardPage implements OnInit {
       const place = col.customer_place || 'N/A';
       const dateTimeStr = `${dateStr} ${timeStr}`;
 
-      const row = `"${col.accno}","${col.customer_name}","${amt}","${col.payment_type || 'Cash'}","${col.receipt_no}","${place}","${dateTimeStr}"`;
+      const row = `"${col.accno}","${col.customer_name}","${amt}","${col.payment_type || 'Cash'}","${place}","${dateTimeStr}"`;
       csvContent += row + '\n';
     });
 
@@ -1417,14 +1440,14 @@ export class AdminDashboardPage implements OnInit {
         col.customer_name,
         col.collected_amount,
         col.payment_type || 'Cash',
-        col.receipt_no,
+
         place,
         `${`${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`} ${d.toLocaleTimeString()}`
       ];
     });
 
     autoTable(doc, {
-      head: [['Account No', 'Name', 'Amount', 'Type', 'Receipt', 'Place', 'Date & Time']],
+      head: [['Account No', 'Name', 'Amount', 'Type', 'Place', 'Date & Time']],
       body: tableData,
       startY: 20,
     });
@@ -2142,6 +2165,175 @@ export class AdminDashboardPage implements OnInit {
       ]
     });
     await actionSheet.present();
+  }
+
+  // ==== BULK IMPORT FUNCTIONS ==== //
+  latestBatchId: string | null = null;
+  isRevertingBatch: boolean = false;
+
+  downloadImportTemplate() {
+    const wb = XLSX.utils.book_new();
+
+    // Sheet 1: Loans
+    const loansData = [
+      ['accno', 'name', 'phone', 'place', 'loan_amount', 'interest_amount', 'loan_date']
+    ];
+    const wsLoans = XLSX.utils.aoa_to_sheet(loansData);
+    // Lock/freeze the top header row
+    wsLoans['!views'] = [{ state: 'frozen', ySplit: 1 }];
+    wsLoans['!freeze'] = { ySplit: 1 };
+    XLSX.utils.book_append_sheet(wb, wsLoans, 'Loans');
+
+    // Sheet 2: Transactions
+    const transactionsData = [
+      ['accno', 'collection_amount', 'collection_date']
+    ];
+    const wsTransactions = XLSX.utils.aoa_to_sheet(transactionsData);
+    // Lock/freeze the top header row
+    wsTransactions['!views'] = [{ state: 'frozen', ySplit: 1 }];
+    wsTransactions['!freeze'] = { ySplit: 1 };
+    XLSX.utils.book_append_sheet(wb, wsTransactions, 'Transactions');
+
+    // Generate Excel file
+    XLSX.writeFile(wb, 'LendFlow_Bulk_Import_Template.xlsx');
+  }
+
+  onFileSelected(event: any) {
+    const file = event.target.files[0];
+    if (file) {
+      this.bulkImportFile = file;
+      this.importResults = null;
+      this.parsedLoansPreview = [];
+      this.parsedTransactionsPreview = [];
+      this.previewExcelData();
+    }
+  }
+
+  previewExcelData() {
+    if (!this.bulkImportFile) return;
+
+    const reader = new FileReader();
+    reader.onload = (e: any) => {
+      setTimeout(() => {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+
+          // Parse Loans Sheet
+          if (workbook.SheetNames.includes('Loans')) {
+            const wsLoans = workbook.Sheets['Loans'];
+            const rawLoans = XLSX.utils.sheet_to_json(wsLoans, { raw: true });
+            
+            this.parsedLoansPreview = rawLoans.map((loan: any) => {
+              let formattedDate = loan.loan_date;
+              if (typeof formattedDate === 'number') {
+                const excelEpoch = new Date(Date.UTC(1899, 11, 30));
+                const jsDate = new Date(excelEpoch.getTime() + formattedDate * 86400000);
+                const d = jsDate.getUTCDate().toString().padStart(2, '0');
+                const m = (jsDate.getUTCMonth() + 1).toString().padStart(2, '0');
+                const y = jsDate.getUTCFullYear();
+                formattedDate = `${d}/${m}/${y}`;
+              } else if (typeof formattedDate === 'string') {
+                formattedDate = formattedDate.replace(/-/g, '/');
+              }
+              
+              return {
+                ...loan,
+                loan_date: formattedDate || ''
+              };
+            });
+          }
+
+          // Parse Transactions Sheet
+          this.previewTotalTransactions = 0;
+          if (workbook.SheetNames.includes('Transactions')) {
+            const wsTransactions = workbook.Sheets['Transactions'];
+            // use raw: true to get accurate types (numbers for dates)
+            const txList: any[] = XLSX.utils.sheet_to_json(wsTransactions, { raw: true });
+            
+            this.parsedTransactionsPreview = txList.map(tx => {
+              // Add to total
+              this.previewTotalTransactions += parseFloat(tx.collection_amount) || 0;
+              
+              // Format date strictly to DD/MM/YYYY
+              let formattedDate = tx.collection_date;
+              if (typeof formattedDate === 'number') {
+                const excelEpoch = new Date(Date.UTC(1899, 11, 30));
+                const jsDate = new Date(excelEpoch.getTime() + formattedDate * 86400000);
+                const d = jsDate.getUTCDate().toString().padStart(2, '0');
+                const m = (jsDate.getUTCMonth() + 1).toString().padStart(2, '0');
+                const y = jsDate.getUTCFullYear();
+                formattedDate = `${d}/${m}/${y}`;
+              } else if (typeof formattedDate === 'string') {
+                // Convert any DD-MM-YYYY to DD/MM/YYYY
+                formattedDate = formattedDate.replace(/-/g, '/');
+              }
+              
+              return {
+                ...tx,
+                collection_date: formattedDate
+              };
+            });
+          }
+        } catch (err) {
+          console.error('Excel parse error:', err);
+          this.showToast('Error parsing Excel file for preview.', 'danger');
+        }
+      }, 0);
+    };
+    reader.readAsArrayBuffer(this.bulkImportFile);
+  }
+
+  processBulkImport() {
+    if (!this.bulkImportFile) return;
+
+    this.isUploadingBulk = true;
+    this.importResults = null;
+
+    if (this.parsedLoansPreview.length === 0 && this.parsedTransactionsPreview.length === 0) {
+      this.isUploadingBulk = false;
+      this.showToast('No data found to import.', 'danger');
+      return;
+    }
+
+    this.apiService.bulkImportExcel({ 
+      loans: this.parsedLoansPreview, 
+      transactions: this.parsedTransactionsPreview 
+    }).subscribe({
+      next: (res: any) => {
+        this.isUploadingBulk = false;
+        this.importResults = res;
+        this.latestBatchId = res.batch_id || null;
+        this.showToast('Bulk import completed.', 'success');
+        this.parsedLoansPreview = [];
+        this.parsedTransactionsPreview = [];
+        this.bulkImportFile = null;
+        this.loadData();
+      },
+      error: (err: any) => {
+        this.isUploadingBulk = false;
+        this.showToast(err.error?.error || 'Failed to process bulk import', 'danger');
+      }
+    });
+  }
+
+  async undoLastUpload() {
+    if (!this.latestBatchId) return;
+
+    this.isRevertingBatch = true;
+    this.apiService.revertBulkImport(this.latestBatchId).subscribe({
+      next: (res: any) => {
+        this.isRevertingBatch = false;
+        this.latestBatchId = null;
+        this.importResults = null;
+        this.showToast('Bulk upload successfully undone. All inserted records removed.', 'success');
+        this.loadData();
+      },
+      error: (err: any) => {
+        this.isRevertingBatch = false;
+        this.showToast(err.error?.error || 'Failed to undo upload.', 'danger');
+      }
+    });
   }
 }
 

@@ -14,7 +14,7 @@
 
       <div class="menu-divider">MENU</div>
 
-      <ion-list class="menu-list" lines="none">
+      <ion-list class="menu-list" lines="none" style="padding-bottom: 90px;">
         <ion-item button (click)="selectTab('dashboard')" [class.active-item]="activeTab === 'dashboard'" class="menu-item">
           <ion-icon name="grid-outline" slot="start"></ion-icon>
           <ion-label>Dashboard</ion-label>
@@ -111,7 +111,7 @@
         <h2>{{ activeTab.replace('-', ' ').replace('-', ' ') | uppercase }}</h2>
       </div>
 
-      <div class="content-container">
+      <div class="content-container" style="padding-bottom: 90px;">
 
                 <!-- TAB: DASHBOARD -->
         <div *ngIf="activeTab === 'dashboard'" class="tab-content">
@@ -413,9 +413,8 @@
               <div class="collection-logs">
                 <div *ngFor="let col of getTodayCollections() | slice:0:todayCollectionsDisplayLimit" class="col-log-card">
                   <div class="col-log-header">
-                    <span class="rcpt">
-                      {{ col.receipt_no || 'Pending Sync' }}
-                      
+                    <span class="rcpt" style="font-size: 13px; color: #64748b; font-weight: 600; display: flex; align-items: center; justify-content: space-between;">
+                      Payment Received
                     </span>
                     <span class="amt">₹{{ col.collected_amount }}</span>
                   </div>
@@ -506,9 +505,8 @@
 
               <div *ngFor="let col of cachedAllCollectionsSorted | slice:0:totalCollectionsDisplayLimit" class="col-log-card">
                 <div class="col-log-header">
-                  <span class="rcpt">
-                    {{ col.receipt_no || 'Pending Sync' }}
-                    
+                  <span class="rcpt" style="font-size: 13px; color: #64748b; font-weight: 600;">
+                    Payment Received
                   </span>
                   <span class="amt">₹{{ col.collected_amount }}</span>
                 </div>

@@ -14,7 +14,7 @@
 
       <div class="menu-divider">MENU</div>
 
-      <ion-list class="menu-list" lines="none">
+      <ion-list class="menu-list" lines="none" style="padding-bottom: 90px;">
         <ion-item button (click)="selectTab('dashboard')" [class.active-item]="activeTab === 'dashboard'" class="menu-item">
           <ion-icon name="grid-outline" slot="start"></ion-icon>
           <ion-label>Dashboard</ion-label>
@@ -140,7 +140,7 @@
         <h2>{{ activeTab.replace('-', ' ').replace('-', ' ') | uppercase }}</h2>
       </div>
 
-      <div class="content-container">
+      <div class="content-container" style="padding-bottom: 90px;">
 
         <div *ngIf="activeTab === 'dashboard'" class="tab-content">
           <div class="section-card glass-panel" style="margin-bottom: 20px;">
@@ -365,7 +365,7 @@
         <div *ngIf="activeTab === 'customers'" class="tab-content">
           <div class="section-card glass-panel">
             <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-              <h3>Registered Customers ({{ dashboardStats?.customer_count || 0 }})</h3>
+              <h3> Customers ({{ dashboardStats?.customer_count || 0 }})</h3>
               <button class="action-btn" style="background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; font-weight: bold;" routerLink="/add-customer">
                 <ion-icon name="person-add-outline" slot="start"></ion-icon> Register Customer
               </button>
@@ -418,6 +418,9 @@
               <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
                 <button class="action-btn-green" (click)="isAccountsGridOpen = !isAccountsGridOpen">
                   <ion-icon name="grid-outline" slot="start"></ion-icon> Account Numbers
+                </button>
+                <button class="action-btn" style="background: linear-gradient(135deg, #8b5cf6, #6d28d9); color: white; border: none; font-weight: bold;" (click)="isBulkImportModalOpen = true">
+                  <ion-icon name="cloud-upload-outline" slot="start"></ion-icon> Bulk Import
                 </button>
                 <button class="action-btn" (click)="openAddLoanModal()">
                   <ion-icon name="cash-outline" slot="start"></ion-icon> Create Loan
@@ -638,8 +641,8 @@
               <div class="collection-logs">
                 <div *ngFor="let col of getTodayCollections() | slice:0:todayCollectionsDisplayLimit" class="col-log-card">
                   <div class="col-log-header">
-                    <span class="rcpt">
-                      {{ col.receipt_no || 'Pending Sync' }}
+                    <span style="font-size: 13px; color: #64748b; font-weight: 600; display: flex; align-items: center; justify-content: space-between;">
+                      Payment Received
                       <ion-icon *ngIf="col.loan_status === 'active'" name="create-outline" style="cursor: pointer; color: #3b82f6; margin-left: 6px;" (click)="openEditCollectionModal(col)"></ion-icon>
                     </span>
                     <span class="amt">₹{{ col.collected_amount }}</span>
@@ -713,7 +716,7 @@
 
             <!-- Employee Summary Card -->
             <div *ngIf="cachedAllCollectionsSorted.length > 0" class="summary-cards-container" style="display: flex; gap: 12px; overflow-x: auto; padding: 16px; background: rgba(255,255,255,0.6); box-shadow: inset 0 2px 4px rgba(0,0,0,0.02); border-bottom: 1px solid rgba(255,255,255,0.05); margin-bottom: 16px;">
-              <div *ngFor="let sum of cachedEmployeeCollectionSummary" style="background: rgba(255, 255, 255, 0.6); padding: 12px 16px; border-radius: 12px; min-width: 170px; border: 1px solid rgba(255, 255, 255, 0.8);">
+              <div *ngFor="let sum of cachedEmployeeCollectionSummary" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); padding: 12px 16px; border-radius: 12px; min-width: 170px; border: 1px solid rgba(59, 130, 246, 0.5); box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);">
                 <p style="margin: 0 0 4px 0; font-size: 13px; color: #94a3b8; font-weight: 600; text-transform: uppercase;">{{ sum.name }} <span style="text-transform: none; font-size: 11px; opacity: 0.8;">({{ sum.count }} Customers)</span></p>
                 <h4 style="margin: 0; color: #10b981; font-size: 18px;">₹{{ sum.total }}</h4>
                 <div style="margin-top: 6px; padding-top: 6px; border-top: 1px dashed rgba(0,0,0,0.05); display: flex; justify-content: space-between; font-size: 11px; font-weight: 600; color: #64748b;">
@@ -731,8 +734,8 @@
 
               <div *ngFor="let col of cachedAllCollectionsSorted | slice:0:totalCollectionsDisplayLimit" class="col-log-card">
                 <div class="col-log-header">
-                  <span class="rcpt">
-                    {{ col.receipt_no || 'Pending Sync' }}
+                  <span class="rcpt" style="font-size: 13px; color: #64748b; font-weight: 600;">
+                    Payment Received
                     <ion-icon *ngIf="col.loan_status === 'active'" name="create-outline" style="cursor: pointer; color: #3b82f6; margin-left: 6px;" (click)="openEditCollectionModal(col)"></ion-icon>
                   </span>
                   <span class="amt">₹{{ col.collected_amount }}</span>
@@ -850,7 +853,7 @@
                   
                   <div class="col-log-header">
                     <span class="rcpt">
-                      {{ tx.type === 'collection' ? tx.type_detail : tx.type === 'investment' ? 'Investment' : tx.type === 'loan' ? 'Loan Given' : 'Expense' }}
+                      {{ tx.type === 'collection' ? tx.type_detail : tx.type === 'investment' ? 'Investment' : tx.type === 'loan' ? 'Loan Given' : tx.type === 'withdrawal' ? 'Withdrawal' : 'Expense' }}
                     </span>
                     <span class="amt" [ngStyle]="{'color': tx.type === 'collection' || tx.type === 'investment' ? '#10b981' : '#e74c3c'}">
                       {{ tx.type === 'collection' || tx.type === 'investment' ? '+' : '-' }} ₹{{ tx.amount }}
@@ -1904,6 +1907,194 @@
           </ion-content>
         </ng-template>
       </ion-modal>
+
+  <!-- BULK IMPORT MODAL -->
+  <ion-modal [isOpen]="isBulkImportModalOpen" (didDismiss)="isBulkImportModalOpen = false">
+    <ng-template>
+      <ion-header class="ion-no-border">
+        <ion-toolbar style="--background: #1e293b;">
+          <ion-title style="color: white; font-weight: 600;">Bulk Excel Import</ion-title>
+          <ion-buttons slot="end">
+            <ion-button (click)="isBulkImportModalOpen = false" style="color: #a1a1aa;">
+              <ion-icon name="close-outline" slot="icon-only"></ion-icon>
+            </ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+      
+      <ion-content style="--background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);">
+        <div style="padding: 12px; max-width: 800px; margin: 0 auto;">
+          <!-- Premium Glassmorphism Card -->
+          <div style="background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.5); padding: 16px; border-radius: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.08); overflow: hidden;">
+            
+            <div style="text-align: center; margin-bottom: 28px;">
+              <div style="width: 64px; height: 64px; background: linear-gradient(135deg, #3b82f6, #8b5cf6); border-radius: 20px; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; box-shadow: 0 10px 20px rgba(59, 130, 246, 0.3);">
+                <ion-icon name="cloud-upload-outline" style="color: white; font-size: 32px;"></ion-icon>
+              </div>
+              <h2 style="margin: 0; font-size: 24px; font-weight: 700; color: #1e293b; letter-spacing: -0.5px;">Data Import Center</h2>
+              <p style="margin: 8px 0 0; font-size: 15px; color: #64748b;">Download the template, fill your loans and transactions, and seamlessly upload them.</p>
+            </div>
+            
+            <div style="margin-bottom: 24px; padding: 16px; background: linear-gradient(to right, #fff1f2, #ffe4e6); border-left: 5px solid #f43f5e; border-radius: 12px; box-shadow: 0 4px 6px rgba(244, 63, 94, 0.05);">
+              <div style="display: flex; align-items: flex-start; gap: 12px;">
+                <ion-icon name="warning" style="color: #f43f5e; font-size: 24px; animation: pulse 2s infinite;"></ion-icon>
+                <p style="margin: 0; font-size: 14px; color: #9f1239; line-height: 1.5;">
+                  <strong style="font-size: 15px; display: block; margin-bottom: 4px;">Crucial Rule</strong>
+                  Do NOT delete, rename, or rearrange the column headers (e.g., <code>accno</code>) in the Excel file. The system relies entirely on these specific names to read your data!
+                </p>
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 16px; margin-bottom: 32px;">
+              <button type="button" (click)="downloadImportTemplate()" style="flex: 1; padding: 16px; border-radius: 16px; background: white; border: 2px solid #e2e8f0; color: #334155; font-size: 15px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
+                <ion-icon name="download-outline" style="font-size: 20px; color: #3b82f6;"></ion-icon> Download Excel Template
+              </button>
+            </div>
+
+            <div style="margin-bottom: 32px;">
+              <label style="color: #334155; font-weight: 700; margin-bottom: 12px; display: block; font-size: 15px;">Upload Completed File</label>
+              <div style="position: relative; border: 2px dashed #cbd5e1; border-radius: 16px; padding: 32px 24px; text-align: center; background: #f8fafc; transition: all 0.3s; cursor: pointer;" onmouseover="this.style.borderColor='#8b5cf6'; this.style.background='#f5f3ff';" onmouseout="this.style.borderColor='#cbd5e1'; this.style.background='#f8fafc';">
+                <ion-icon name="document-attach-outline" style="font-size: 48px; color: #94a3b8; margin-bottom: 12px;"></ion-icon>
+                <h3 style="margin: 0 0 8px; font-size: 16px; font-weight: 600; color: #475569;">Click or Drag .xlsx file here</h3>
+                <p style="margin: 0; font-size: 13px; color: #64748b;">Maximum file size: 10MB</p>
+                <input type="file" accept=".xlsx, .xls" (change)="onFileSelected($event)" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;">
+              </div>
+            </div>
+
+            <!-- Preview Section -->
+            <div *ngIf="parsedLoansPreview.length > 0 || parsedTransactionsPreview.length > 0" style="margin-bottom: 32px; animation: slideUp 0.4s ease-out;">
+              <h3 style="color: #1e293b; font-size: 18px; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+                <ion-icon name="eye-outline" style="color: #3b82f6;"></ion-icon> Data Preview
+              </h3>
+              
+              <div *ngIf="parsedLoansPreview.length > 0" style="margin-bottom: 24px; background: white; padding: 16px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); border: 1px solid #e2e8f0;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                  <strong style="color: #3b82f6; font-size: 15px; display: flex; align-items: center; gap: 6px;">
+                    <ion-icon name="wallet"></ion-icon> Loans Sheet
+                  </strong>
+                  <span style="background: #eff6ff; color: #2563eb; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 700;">{{ parsedLoansPreview.length }} rows found</span>
+                </div>
+                <div style="border-radius: 12px; border: 1px solid #e2e8f0; overflow-x: auto;">
+                  <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                    <thead style="background: #f8fafc;">
+                      <tr>
+                        <th style="padding: 12px 16px; text-align: left; border-bottom: 1px solid #e2e8f0; color: #475569; font-weight: 600;">Acc No</th>
+                        <th style="padding: 12px 16px; text-align: left; border-bottom: 1px solid #e2e8f0; color: #475569; font-weight: 600;">Name</th>
+                        <th style="padding: 12px 16px; text-align: right; border-bottom: 1px solid #e2e8f0; color: #475569; font-weight: 600;">Amount</th>
+                        <th style="padding: 12px 16px; text-align: right; border-bottom: 1px solid #e2e8f0; color: #475569; font-weight: 600;">Interest</th>
+                        <th style="padding: 12px 16px; text-align: left; border-bottom: 1px solid #e2e8f0; color: #475569; font-weight: 600;">Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let loan of parsedLoansPreview | slice:0:10; let i = index" [style.background]="i % 2 === 0 ? '#ffffff' : '#f8fafc'" style="border-bottom: 1px solid #f1f5f9; transition: background 0.2s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background=''">
+                        <td style="padding: 10px 16px; font-weight: 600; color: #334155;">{{ loan.accno }}</td>
+                        <td style="padding: 10px 16px; color: #475569;">{{ loan.name }}</td>
+                        <td style="padding: 10px 16px; text-align: right; font-weight: 700; color: #0f172a;">₹{{ loan.loan_amount }}</td>
+                        <td style="padding: 10px 16px; text-align: right; color: #64748b;">₹{{ loan.interest_amount }}</td>
+                        <td style="padding: 10px 16px; color: #64748b;">{{ loan.loan_date || '-' }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div *ngIf="parsedLoansPreview.length > 10" style="text-align: center; margin-top: 12px;">
+                  <span style="font-size: 12px; color: #64748b; background: #f1f5f9; padding: 4px 12px; border-radius: 12px;">Showing first 10 of {{ parsedLoansPreview.length }} rows</span>
+                </div>
+              </div>
+
+              <div *ngIf="parsedTransactionsPreview.length > 0" style="background: white; padding: 16px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); border: 1px solid #e2e8f0;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                  <strong style="color: #10b981; font-size: 15px; display: flex; align-items: center; gap: 6px;">
+                    <ion-icon name="cash"></ion-icon> Transactions Sheet
+                  </strong>
+                  <div style="display: flex; gap: 8px; align-items: center;">
+                    <span style="font-weight: 700; color: #047857; background: #d1fae5; padding: 4px 12px; border-radius: 20px; font-size: 13px;">₹{{ previewTotalTransactions }}</span>
+                    <span style="background: #ecfdf5; color: #059669; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 700;">{{ parsedTransactionsPreview.length }} rows</span>
+                  </div>
+                </div>
+                <div style="border-radius: 12px; border: 1px solid #e2e8f0; overflow-x: auto;">
+                  <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                    <thead style="background: #f8fafc;">
+                      <tr>
+                        <th style="padding: 12px 16px; text-align: left; border-bottom: 1px solid #e2e8f0; color: #475569; font-weight: 600;">Acc No</th>
+                        <th style="padding: 12px 16px; text-align: right; border-bottom: 1px solid #e2e8f0; color: #475569; font-weight: 600;">Amount</th>
+                        <th style="padding: 12px 16px; text-align: left; border-bottom: 1px solid #e2e8f0; color: #475569; font-weight: 600;">Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let tx of parsedTransactionsPreview | slice:0:10; let i = index" [style.background]="i % 2 === 0 ? '#ffffff' : '#f8fafc'" style="border-bottom: 1px solid #f1f5f9; transition: background 0.2s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background=''">
+                        <td style="padding: 10px 16px; font-weight: 600; color: #334155;">{{ tx.accno }}</td>
+                        <td style="padding: 10px 16px; text-align: right; font-weight: 700; color: #10b981;">₹{{ tx.collection_amount }}</td>
+                        <td style="padding: 10px 16px; color: #64748b;">{{ tx.collection_date }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div *ngIf="parsedTransactionsPreview.length > 10" style="text-align: center; margin-top: 12px;">
+                  <span style="font-size: 12px; color: #64748b; background: #f1f5f9; padding: 4px 12px; border-radius: 12px;">Showing first 10 of {{ parsedTransactionsPreview.length }} rows</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Import Results Section -->
+            <div *ngIf="importResults" style="margin-bottom: 32px; padding: 24px; background: linear-gradient(135deg, #f0fdf4, #dcfce7); border-radius: 16px; border: 1px solid #bbf7d0; box-shadow: 0 10px 25px rgba(22, 101, 52, 0.1); animation: slideUp 0.5s ease-out;">
+              <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+                <ion-icon name="checkmark-circle" style="color: #166534; font-size: 28px;"></ion-icon>
+                <h3 style="color: #166534; font-size: 20px; font-weight: 700; margin: 0;">Upload Completed</h3>
+              </div>
+              
+              <div style="margin-bottom: 20px; background: white; padding: 16px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                  <strong style="color: #15803d; font-size: 15px;">Loans Uploaded</strong>
+                  <div style="display: flex; gap: 8px;">
+                    <span style="background: #dcfce7; color: #166534; padding: 4px 10px; border-radius: 8px; font-size: 13px; font-weight: 700;">{{ importResults.loans.success }} Success</span>
+                    <span *ngIf="importResults.loans.failed > 0" style="background: #fee2e2; color: #991b1b; padding: 4px 10px; border-radius: 8px; font-size: 13px; font-weight: 700;">{{ importResults.loans.failed }} Failed</span>
+                  </div>
+                </div>
+                <div *ngIf="importResults.loans.errors.length > 0" style="margin-top: 12px; font-size: 13px; color: #b91c1c; max-height: 120px; overflow-y: auto; background: #fef2f2; padding: 12px; border-radius: 8px; border: 1px solid #fecaca;">
+                  <div *ngFor="let err of importResults.loans.errors" style="margin-bottom: 6px; display: flex; align-items: flex-start; gap: 6px;">
+                    <ion-icon name="alert-circle" style="margin-top: 2px; flex-shrink: 0;"></ion-icon> <span>{{ err }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div style="background: white; padding: 16px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                  <strong style="color: #15803d; font-size: 15px;">Transactions Uploaded</strong>
+                  <div style="display: flex; gap: 8px;">
+                    <span style="background: #dcfce7; color: #166534; padding: 4px 10px; border-radius: 8px; font-size: 13px; font-weight: 700;">{{ importResults.transactions.success }} Success</span>
+                    <span *ngIf="importResults.transactions.failed > 0" style="background: #fee2e2; color: #991b1b; padding: 4px 10px; border-radius: 8px; font-size: 13px; font-weight: 700;">{{ importResults.transactions.failed }} Failed</span>
+                  </div>
+                </div>
+                <div *ngIf="importResults.transactions.errors.length > 0" style="margin-top: 12px; font-size: 13px; color: #b91c1c; max-height: 120px; overflow-y: auto; background: #fef2f2; padding: 12px; border-radius: 8px; border: 1px solid #fecaca;">
+                  <div *ngFor="let err of importResults.transactions.errors" style="margin-bottom: 6px; display: flex; align-items: flex-start; gap: 6px;">
+                    <ion-icon name="alert-circle" style="margin-top: 2px; flex-shrink: 0;"></ion-icon> <span>{{ err }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Undo Upload Button -->
+              <div *ngIf="latestBatchId" style="margin-top: 24px; text-align: center;">
+                <button type="button" (click)="undoLastUpload()" [disabled]="isRevertingBatch" style="padding: 12px 24px; border-radius: 12px; background: #fee2e2; border: 2px solid #ef4444; color: #b91c1c; font-size: 15px; font-weight: 700; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px;">
+                  <ion-icon name="arrow-undo-outline" style="font-size: 20px;"></ion-icon>
+                  <span *ngIf="!isRevertingBatch">Undo Last Upload</span>
+                  <span *ngIf="isRevertingBatch">Reverting...</span>
+                </button>
+              </div>
+            </div>
+
+            <button type="button" *ngIf="parsedLoansPreview.length > 0 || parsedTransactionsPreview.length > 0" class="submit-modal-btn" style="width: 100%; padding: 18px; border-radius: 16px; background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; font-size: 18px; font-weight: 700; border: none; box-shadow: 0 10px 25px rgba(139, 92, 246, 0.4); cursor: pointer; transition: all 0.3s; position: relative; overflow: hidden;" (click)="processBulkImport()" [disabled]="isUploadingBulk" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 15px 30px rgba(139, 92, 246, 0.5)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 10px 25px rgba(139, 92, 246, 0.4)';">
+              <span *ngIf="!isUploadingBulk" style="display: flex; align-items: center; justify-content: center; gap: 10px;">
+                <ion-icon name="cloud-upload" style="font-size: 24px;"></ion-icon> Confirm & Upload Data
+              </span>
+              <span *ngIf="isUploadingBulk" style="display: flex; align-items: center; justify-content: center; gap: 10px;">
+                <ion-spinner name="crescent" style="width: 24px; height: 24px; color: white;"></ion-spinner> Processing Import...
+              </span>
+            </button>
+          </div>
+        </div>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
 
     </ion-content>
   </div>
