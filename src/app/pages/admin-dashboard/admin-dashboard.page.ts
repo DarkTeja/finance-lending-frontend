@@ -1223,12 +1223,14 @@ export class AdminDashboardPage implements OnInit {
   cachedEmployeeCollectionSummary: any[] = [];
   cachedFilteredExpenses: any[] = [];
   cachedTotalFilteredCollectionAmount: number = 0;
+  cachedDefaulters: any[] = [];
   
   updateCachedCalculations() {
     this.cachedAllCollectionsSorted = this.getAllCollectionsSorted();
     this.cachedEmployeeCollectionSummary = this.getEmployeeCollectionSummary();
     this.cachedFilteredExpenses = this.getFilteredExpenses();
     this.cachedTotalFilteredCollectionAmount = this.getTotalFilteredCollectionAmount();
+    this.cachedDefaulters = this.getDefaulters();
   }
 
   getActiveLoansCountForCustomer(customerUuid: string): number {

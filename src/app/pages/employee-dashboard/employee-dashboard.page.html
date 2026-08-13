@@ -482,13 +482,13 @@
             <div *ngIf="cachedAllCollectionsSorted.length > 0" style="padding: 16px; display: flex; justify-content: center; width: 100%;">
               <div style="background: rgba(255, 255, 255, 0.75); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid #3b82f6; padding: 20px 40px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05); text-align: center;">
                 <p style="margin: 0 0 8px 0; font-size: 14px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1px;">Overall Total Collected</p>
-                <h3 style="margin: 0; font-size: 36px; font-weight: 800; background: linear-gradient(135deg, #10b981, #059669); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">₹{{ getTotalFilteredCollectionAmount() }}</h3>
+                <h3 style="margin: 0; font-size: 36px; font-weight: 800; background: linear-gradient(135deg, #10b981, #059669); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">₹{{ cachedTotalFilteredCollectionAmount }}</h3>
               </div>
             </div>
 
             <!-- Employee Summary Card -->
             <div *ngIf="cachedAllCollectionsSorted.length > 0" class="summary-cards-container" style="display: flex; gap: 12px; overflow-x: auto; padding: 16px; background: rgba(255,255,255,0.6); box-shadow: inset 0 2px 4px rgba(0,0,0,0.02); border-bottom: 1px solid rgba(255,255,255,0.05); margin-bottom: 16px;">
-              <div *ngFor="let sum of getEmployeeCollectionSummary()" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); padding: 12px 16px; border-radius: 12px; min-width: 170px; border: 1px solid rgba(59, 130, 246, 0.5); box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);">
+              <div *ngFor="let sum of cachedEmployeeCollectionSummary" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); padding: 12px 16px; border-radius: 12px; min-width: 170px; border: 1px solid rgba(59, 130, 246, 0.5); box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);">
                 <p style="margin: 0 0 4px 0; font-size: 13px; color: #64748b; font-weight: 600; text-transform: uppercase;">{{ sum.name }}</p>
                 <h4 style="margin: 0; color: #10b981; font-size: 18px;">₹{{ sum.total }}</h4>
                 <div style="margin-top: 6px; padding-top: 6px; border-top: 1px dashed rgba(0,0,0,0.05); display: flex; justify-content: space-between; font-size: 11px; font-weight: 600; color: #64748b;">
@@ -683,11 +683,11 @@
                 <div class="details-card">
                   <h5>Payment History</h5>
                   <div class="history-list">
-                    <div *ngIf="getLoanHistory(selectedDetailedLoan.uuid).length === 0" class="no-history">
+                    <div *ngIf="cachedSelectedLoanHistory.length === 0" class="no-history">
                       No payments have been recorded for this loan.
                     </div>
                     
-                    <div *ngFor="let payment of getLoanHistory(selectedDetailedLoan.uuid)" class="history-item">
+                    <div *ngFor="let payment of cachedSelectedLoanHistory" class="history-item">
                       <div>
                         <div class="hist-date">
                           {{ payment.collection_date | date:'dd/MM/yyyy, h:mm a' }}
@@ -760,12 +760,12 @@
             <div style="display: flex; align-items: center; gap: 6px; background: rgba(0, 0, 0, 0.03); border: 1px solid rgba(0, 0, 0, 0.05); padding: 4px 12px; border-radius: 50px;">
               <ion-icon name="filter" style="color: #64748b; font-size: 14px;"></ion-icon>
               <span style="font-weight: 600; color: #475569; font-size: 12px;">Overdue ></span>
-              <input type="number" [(ngModel)]="defaultersDaysThreshold" style="width: 25px; border: none; background: transparent; font-weight: 800; color: #ef4444; font-size: 14px; text-align: center; outline: none; padding: 0;" min="0">
+              <input type="number" [(ngModel)]="defaultersDaysThreshold" (ngModelChange)="updateCachedCalculations()" style="width: 25px; border: none; background: transparent; font-weight: 800; color: #ef4444; font-size: 14px; text-align: center; outline: none; padding: 0;" min="0">
               <span style="font-weight: 600; color: #475569; font-size: 12px;">days</span>
             </div>
           </div>
           
-          <div *ngIf="getDefaulters().length === 0" class="empty-state" style="padding: 40px; text-align: center;">
+          <div *ngIf="cachedDefaulters.length === 0" class="empty-state" style="padding: 40px; text-align: center;">
             <div style="background: rgba(16, 185, 129, 0.1); width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
               <ion-icon name="shield-checkmark" style="font-size: 40px; color: #10b981;"></ion-icon>
             </div>
@@ -773,8 +773,8 @@
             <p style="color: #64748b; margin: 0;">No customers are overdue for more than <strong style="color: #334155;">{{ defaultersDaysThreshold }}</strong> days.</p>
           </div>
           
-          <div *ngIf="getDefaulters().length > 0" class="transaction-list">
-            <div *ngFor="let loan of getDefaulters()" class="transaction-item" style="background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.8); padding: 14px; border-radius: 16px; margin-bottom: 12px; display: flex; align-items: center; gap: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
+          <div *ngIf="cachedDefaulters.length > 0" class="transaction-list">
+            <div *ngFor="let loan of cachedDefaulters" class="transaction-item" style="background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.8); padding: 14px; border-radius: 16px; margin-bottom: 12px; display: flex; align-items: center; gap: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
               
               <!-- Avatar -->
               <div style="flex-shrink: 0; width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, #ef4444, #f87171); color: white; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3);">

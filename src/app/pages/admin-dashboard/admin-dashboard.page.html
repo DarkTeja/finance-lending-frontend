@@ -203,12 +203,12 @@
             <div style="display: flex; align-items: center; gap: 6px; background: rgba(0, 0, 0, 0.03); border: 1px solid rgba(0, 0, 0, 0.05); padding: 4px 12px; border-radius: 50px;">
               <ion-icon name="filter" style="color: #64748b; font-size: 14px;"></ion-icon>
               <span style="font-weight: 600; color: #475569; font-size: 12px;">Overdue ></span>
-              <input type="number" [(ngModel)]="defaultersDaysThreshold" style="width: 25px; border: none; background: transparent; font-weight: 800; color: #ef4444; font-size: 14px; text-align: center; outline: none; padding: 0;" min="0">
+              <input type="number" [(ngModel)]="defaultersDaysThreshold" (ngModelChange)="updateCachedCalculations()" style="width: 25px; border: none; background: transparent; font-weight: 800; color: #ef4444; font-size: 14px; text-align: center; outline: none; padding: 0;" min="0">
               <span style="font-weight: 600; color: #475569; font-size: 12px;">days</span>
             </div>
           </div>
           
-          <div *ngIf="getDefaulters().length === 0" class="empty-state" style="padding: 40px; text-align: center;">
+          <div *ngIf="cachedDefaulters.length === 0" class="empty-state" style="padding: 40px; text-align: center;">
             <div style="background: rgba(16, 185, 129, 0.1); width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
               <ion-icon name="shield-checkmark" style="font-size: 40px; color: #10b981;"></ion-icon>
             </div>
@@ -216,8 +216,8 @@
             <p style="color: #64748b; margin: 0;">No customers are overdue for more than <strong style="color: #334155;">{{ defaultersDaysThreshold }}</strong> days.</p>
           </div>
           
-          <div *ngIf="getDefaulters().length > 0" class="transaction-list">
-            <div *ngFor="let loan of getDefaulters()" class="transaction-item" style="background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.8); padding: 14px; border-radius: 16px; margin-bottom: 12px; display: flex; align-items: center; gap: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
+          <div *ngIf="cachedDefaulters.length > 0" class="transaction-list">
+            <div *ngFor="let loan of cachedDefaulters" class="transaction-item" style="background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.8); padding: 14px; border-radius: 16px; margin-bottom: 12px; display: flex; align-items: center; gap: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.03);">
               
               <!-- Avatar -->
               <div style="flex-shrink: 0; width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, #ef4444, #f87171); color: white; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3);">

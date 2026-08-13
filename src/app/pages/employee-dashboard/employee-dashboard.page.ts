@@ -104,9 +104,15 @@ export class EmployeeDashboardPage implements OnInit {
 
   // Cached calculated arrays to prevent UI freezing
   cachedAllCollectionsSorted: any[] = [];
+  cachedEmployeeCollectionSummary: any[] = [];
+  cachedTotalFilteredCollectionAmount: number = 0;
+  cachedDefaulters: any[] = [];
   
   updateCachedCalculations() {
     this.cachedAllCollectionsSorted = this.getAllCollectionsSorted();
+    this.cachedEmployeeCollectionSummary = this.getEmployeeCollectionSummary();
+    this.cachedTotalFilteredCollectionAmount = this.getTotalFilteredCollectionAmount();
+    this.cachedDefaulters = this.getDefaulters();
   }
   metricsConfig: any[] = [
     { id: 'today', title: 'Today Collection', color: '#3b82f6', key: 'today_collection', size: 'half' },
@@ -127,6 +133,7 @@ export class EmployeeDashboardPage implements OnInit {
   customerSearchQuery = '';
   filteredCustomersForLoan: any[] = [];
   selectedCustomerForLoan: any = null;
+  cachedSelectedLoanHistory: any[] = [];
 
   // Collections variables
   collections: any[] = [];
@@ -451,6 +458,7 @@ export class EmployeeDashboardPage implements OnInit {
   // --- Loan Details Modal ---
   openLoanDetails(loan: any) {
     this.selectedDetailedLoan = loan;
+    this.cachedSelectedLoanHistory = this.getLoanHistory(loan.uuid);
     this.isLoanDetailsOpen = true;
   }
 
